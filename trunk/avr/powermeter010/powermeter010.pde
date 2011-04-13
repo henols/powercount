@@ -34,32 +34,33 @@ void loop() {
 		ledState = !ledState;
 		digitalWrite(LED_PIN, ledState);
 		last_pulse_time = millis();
+//		if (first_pulse_time == 0) {// we were reset
+//			first_pulse_time = last_pulse_time;
+//		}
 
-if	(counter == 1 || first_pulse_time == 0) // we were reset
-	first_pulse_time = last_pulse_time
-}
-lastX = newX;
-
-if (Serial.available() > 0) {
-	// get incoming byte:
-	byte inByte = Serial.read();
-	switch(inByte) {
-		case PULSES:
-		getCount();
-		break;
-		case PULSES_TEXT:
-		getCountText();
-		break;
-		case CONFIRM:
-		confirmCount();
-		break;
-		case NAME:
-		getName();
-		break;
 	}
+	lastX = newX;
 
-	//    Serial.print();    
-}
+	if (Serial.available() > 0) {
+		// get incoming byte:
+		byte inByte = Serial.read();
+		switch (inByte) {
+		case PULSES:
+			getCount();
+			break;
+		case PULSES_TEXT:
+			getCountText();
+			break;
+		case CONFIRM:
+			confirmCount();
+			break;
+		case NAME:
+			getName();
+			break;
+		}
+
+		//    Serial.print();    
+	}
 
 }
 
