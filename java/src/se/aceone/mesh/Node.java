@@ -15,13 +15,15 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 
 public abstract class Node extends Thread implements Protocol {
+	private final String name;
 	private boolean shutdown = false;
 	private Timer timer;
 	private ObjectOutputStream outputStream;
 	private ObjectInputStream inputStream;
 	private CommandLine cmd;
 
-	public Node(String[] args) {
+	public Node(String name, String[] args) {
+		this.name = name;
 		Options options = new Options();
 		options.addOption("h", true, "hash key");
 		addOptions(options);
@@ -30,7 +32,8 @@ public abstract class Node extends Thread implements Protocol {
 		try {
 			cmd = parser.parse(options, args);
 		} catch (ParseException e) {
-			System.out.println("Command line parsing failed. Reason: " + e.getMessage() + ". Exiting.");
+			System.out.println("Command line parsing failed. Reason: "
+					+ e.getMessage() + ". Exiting.");
 			System.exit(1);
 		}
 		String hash = cmd.getOptionValue('h');
@@ -45,7 +48,6 @@ public abstract class Node extends Thread implements Protocol {
 		}
 	}
 
-	
 	void addOptions(Options options) {
 	}
 
@@ -53,8 +55,7 @@ public abstract class Node extends Thread implements Protocol {
 		Socket s = new Socket("localhost", 34200);
 		outputStream = new ObjectOutputStream(s.getOutputStream());
 		inputStream = new ObjectInputStream(s.getInputStream());
-		
-		
+
 		// register
 		int op = inputStream.readInt();
 		if (op != REGISTER) {
@@ -62,32 +63,35 @@ public abstract class Node extends Thread implements Protocol {
 		}
 		outputStream.writeInt(REGISTER);
 		outputStream.writeUTF(hash);
+		outputStream.writeUTF(name);
 		outputStream.flush();
 		op = inputStream.readInt();
 		if (op != OK) {
 			return false;
 		}
-		System.out.println("Connected ok");
+		info("Connected ok");
 		timer = new Timer("Ping timer", true);
 		TimerTask task = new TimerTask() {
 
 			@Override
 			public void run() {
-				try {
-					outputStream.writeInt(PING);
-					outputStream.flush();
-					int op = inputStream.readInt();
-					if (op == OK) {
-//						System.out.println("Ping OK");
-					} else if (op == SHUTDOWN) {
-						System.out.println("Setting shutdown");
+				synchronized (outputStream) {
+					try {
+						outputStream.writeInt(PING);
+						outputStream.flush();
+						int op = inputStream.readInt();
+						if (op == OK) {
+							// System.out.println("Ping OK");
+						} else if (op == SHUTDOWN) {
+							System.out.println("Setting shutdown");
+							shutdown = true;
+							timer.cancel();
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
 						shutdown = true;
 						timer.cancel();
 					}
-				} catch (IOException e) {
-					e.printStackTrace();
-					shutdown = true;
-					timer.cancel();
 				}
 
 			}
@@ -107,10 +111,10 @@ public abstract class Node extends Thread implements Protocol {
 
 	abstract void work(CommandLine cmd2);
 
-	boolean isShutingdown(){
+	boolean isShutingdown() {
 		return shutdown;
 	}
-	
+
 	private void close() {
 		try {
 			outputStream.writeInt(CLOSED);
@@ -120,5 +124,29 @@ public abstract class Node extends Thread implements Protocol {
 		} catch (IOException e) {
 		}
 		System.exit(0);
+	}
+
+	void info(String message) {
+		writeLog(INFO, message);
+	}
+
+	void warning(String message) {
+		writeLog(WARN, message);
+	}
+
+	void error(String message) {
+		writeLog(ERROR, message);
+	}
+
+	private void writeLog(int level, String message) {
+		synchronized (outputStream) {
+			try {
+				outputStream.writeInt(LOG);
+				outputStream.writeInt(level);
+				outputStream.writeUTF(message);
+				outputStream.flush();
+			} catch (IOException e) {
+			}
+		}
 	}
 }

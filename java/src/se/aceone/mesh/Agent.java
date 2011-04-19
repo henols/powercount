@@ -30,6 +30,8 @@ public class Agent extends Thread implements Protocol {
 
 	private ObjectOutputStream os;
 
+	private static Logger log;
+
 	public Agent() {
 		Properties prop = System.getProperties();
 		classPath = prop.getProperty("java.class.path", null);
@@ -43,20 +45,36 @@ public class Agent extends Thread implements Protocol {
 
 	private void work() throws IOException {
 		ServerSocket serverSocket = new ServerSocket(34200);
+		log.info("Server socket created");
 		while (alive) {
 			try {
-				System.out.println("Server socket created");
 				Socket socket = serverSocket.accept();
+				log.info("Got socket accept");
 				is = new ObjectInputStream(socket.getInputStream());
 				os = new ObjectOutputStream(socket.getOutputStream());
 
-				String key = NodeWrapper.connect(is, os);
-				NodeWrapper node = nodes.get(key);
-				node.setConnection(socket, is, os);
+				connect(socket, is, os);
 			} catch (IOException e) {
+				log.error(e.getMessage());
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public void connect(Socket socket, ObjectInputStream is,
+			ObjectOutputStream os) throws IOException {
+		log.info("Connecting.");
+		os.writeInt(REGISTER);
+		os.flush();
+		@SuppressWarnings("unused")
+		int readInt = is.readInt();
+		String key = is.readUTF();
+		String name = is.readUTF();
+		os.writeInt(OK);
+		os.flush();
+		log.info("Got connection from " +name +"("+ key+")");
+		NodeWrapper node = nodes.get(key);
+		node.setConnection(socket, is, os, name	);
 	}
 
 	@Override
@@ -71,8 +89,6 @@ public class Agent extends Thread implements Protocol {
 				}
 				sleep(10000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 		}
 	}
@@ -81,16 +97,18 @@ public class Agent extends Thread implements Protocol {
 		try {
 			String command = node.getCommand();
 			String key = node.getKey();
-			String cmd = "javaw -cp \"" + classPath + "\" " + command + " -h " + key;
-			System.out.println(cmd);
+			String cmd = "javaw -cp \"" + classPath + "\" " + command + " -h "
+					+ key;
+			log.info(cmd);
 			Process process = Runtime.getRuntime().exec(cmd);
-			System.out.println(process.toString());
+			log.info(process.toString());
 		} catch (IOException e) {
-			e.printStackTrace();
+			log.error(e.getMessage());
 		}
 	}
 
 	public static void main(String[] args) throws IOException {
+		log = new Logger("Agent");
 		Options options = new Options();
 		options.addOption("h", "help", false, "Print this message");
 		options.addOption("p", true, "Filename of property file");
@@ -100,7 +118,8 @@ public class Agent extends Thread implements Protocol {
 		try {
 			cmd = parser.parse(options, args);
 		} catch (ParseException e) {
-			System.out.println("Command line parsing failed. Reason: " + e.getMessage() + ". Exiting.");
+			log.error("Command line parsing failed. Reason: "
+					+ e.getMessage() + ". Exiting.");
 			System.exit(1);
 		}
 		@SuppressWarnings("unused")
