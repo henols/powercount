@@ -14,23 +14,13 @@ public class NodeWrapper implements Runnable, Protocol {
 	private final String key;
 	private int status = OK;
 	private final String cmd;
+	int i = 0;
+	private Logger nodeLog;
+	private Logger log;
 
 	public NodeWrapper(String cmd) {
 		this.cmd = cmd;
 		this.key = cmd.hashCode() + "";
-	}
-
-	public static String connect(ObjectInputStream is, ObjectOutputStream os) throws IOException {
-		System.out.println("Connecting.");
-		os.writeInt(REGISTER);
-		os.flush();
-		@SuppressWarnings("unused")
-		int readInt = is.readInt();
-		String key = is.readUTF();
-		os.writeInt(OK);
-		os.flush();
-		System.out.println("Got connection from " + key);
-		return key;
 	}
 
 	public String getCommand() {
@@ -45,24 +35,26 @@ public class NodeWrapper implements Runnable, Protocol {
 		status = SHUTDOWN;
 	}
 
-	int i = 0;
-
 	@Override
 	public void run() {
 		try {
 			while (alive) {
 				int v = is.readInt();
 				if (v == PING) {
-//					System.out.println("Got ping");
-//					if (i % 5 == 0) {
-//						System.out.println("Sending shutdown");
-//						status = SHUTDOWN;
-//					}
+					// System.out.println("Got ping");
+					// if (i % 5 == 0) {
+					// System.out.println("Sending shutdown");
+					// status = SHUTDOWN;
+					// }
 					if (status == SHUTDOWN) {
 						alive = false;
 					}
 					os.writeInt(status);
 					os.flush();
+				} else if (v == LOG) {
+					int logLevel = is.readInt();
+					String message = is.readUTF();
+					nodeLog.log(logLevel, message);
 				} else {
 					os.writeInt(SHUTDOWN);
 					os.flush();
@@ -85,7 +77,12 @@ public class NodeWrapper implements Runnable, Protocol {
 		return alive;
 	}
 
-	public void setConnection(Socket socket, ObjectInputStream is, ObjectOutputStream os) throws IOException {
+	public void setConnection(Socket socket, ObjectInputStream is,
+			ObjectOutputStream os, String name) throws IOException {
+
+		log = new Logger("Wrapper",name, key);
+		nodeLog = new Logger("Node",name, key);
+
 		this.socket = socket;
 		this.is = is;
 		this.os = os;

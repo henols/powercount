@@ -19,7 +19,7 @@ public class BlueToothNode extends Node {
 	private int updateRate = 10;
 
 	public BlueToothNode(String[] args) {
-		super(args);
+		super("BlueToothNode", args);
 	}
 
 	void addOptions(Options options) {
@@ -41,7 +41,7 @@ public class BlueToothNode extends Node {
 
 		UUID uuid = new UUID(blueToothAddress, false);
 		String connectionURL = "btspp://" + uuid.toString() + ":1;master=false;encrypt=false;authenticate=false";
-		System.out.println("Connecting to " + uuid.toString());
+		info("Connecting to " + uuid.toString());
 		StreamConnection streamConnection = null;
 
 		InputStream is = null;
@@ -56,7 +56,7 @@ public class BlueToothNode extends Node {
 					is = streamConnection.openInputStream();
 				}
 			} catch (IOException e) {
-				System.out.println("Faild to connect: " + e.getMessage());
+				warning("Faild to connect: " + e.getMessage());
 				try {
 					Thread.sleep(updateRate * 1000);
 				} catch (InterruptedException e1) {
@@ -92,8 +92,7 @@ public class BlueToothNode extends Node {
 					os.write('\n');
 				}
 			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+				error(e1.getMessage());
 			}
 
 			// Send some data here
@@ -104,5 +103,4 @@ public class BlueToothNode extends Node {
 
 		}
 	}
-
 }
