@@ -63,7 +63,7 @@ public class NodeWrapper implements Runnable, Protocol {
 				i++;
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			log.error(e.getMessage());
 		} finally {
 			alive = false;
 			try {
