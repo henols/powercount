@@ -80,7 +80,8 @@ public class BlueToothNode extends Node {
 				System.out.println("Meter value:" + (total) + "kW Total:" + divide + "kW Last:" + p + "W");
 
 				// http://yoursite/api/api.php?json={testA:200,testB:400}
-				String url = "http://aceone.se/emoncms/api/api.php?json={MainPower:" + divide + "}";
+				// http://aceone.se/emoncms/api/post.php?json={MainPower:1.321}&apikey=daa5d8d5e0814652fb524b07852496
+				String url = "http://aceone.se/emoncms/api/post.php?json={MainPower:" + divide + "}&apikey=daa5d8d5e0814652fb524b07852496";
 				HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
 				System.out.println(url +" "+ connection.getResponseCode());
 				if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
