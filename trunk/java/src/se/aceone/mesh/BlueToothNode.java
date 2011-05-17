@@ -28,7 +28,7 @@ public class BlueToothNode extends Node {
 
 	@Override
 	void work(CommandLine cmd) {
-		System.out.println("Doing the work");
+		info("Doing the work");
 		process(cmd.getOptionValue('b'));
 		System.exit(0);
 	}
@@ -77,13 +77,13 @@ public class BlueToothNode extends Node {
 				BigDecimal b = new BigDecimal(power);
 				BigDecimal divide = b.divide(new BigDecimal(1000), 3, BigDecimal.ROUND_HALF_UP);
 				total += ((double) p) / 1000;
-				System.out.println("Meter value:" + (total) + "kW Total:" + divide + "kW Last:" + p + "W");
+				info("Meter value:" + (total) + "kW Total:" + divide + "kW Last:" + p + "W");
 
 				// http://yoursite/api/api.php?json={testA:200,testB:400}
 				// http://aceone.se/emoncms/api/post.php?json={MainPower:1.321}&apikey=daa5d8d5e0814652fb524b07852496
 				String url = "http://aceone.se/emoncms/api/post.php?json={MainPower:" + divide + "}&apikey=daa5d8d5e0814652fb524b07852496";
 				HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-				System.out.println(url +" "+ connection.getResponseCode());
+				info(url +" "+ connection.getResponseCode());
 				if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
 					os.write('c');
 					for (int i = 0; i < power.length(); i++) {
