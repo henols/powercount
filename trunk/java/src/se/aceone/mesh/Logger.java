@@ -1,5 +1,9 @@
 package se.aceone.mesh;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class Logger implements Protocol {
 	private final String name;
 	private final String key;
@@ -35,10 +39,14 @@ public class Logger implements Protocol {
 		writeLog(level, message);
 	}
 
-	
+	SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
 	
 	private StringBuilder writeLog(int logLevel, String message) {
 		StringBuilder sb = new StringBuilder();
+		Date d = new Date();
+		sb.append(df.format(d));
+		sb.append(" ");
+		
 		if (logLevel == INFO) {
 			sb.append("INFO:    ");
 		} else if (logLevel == WARN) {
