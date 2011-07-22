@@ -77,13 +77,13 @@ public class BlueToothNode extends Node {
 				BigDecimal b = new BigDecimal(power);
 				BigDecimal divide = b.divide(new BigDecimal(1000), 3, BigDecimal.ROUND_HALF_UP);
 				total += ((double) p) / 1000;
-				info("Meter value:" + (total) + "kW Total:" + divide + "kW Last:" + p + "W");
+				debug("Meter value:" + (total) + "kW Total:" + divide + "kW Last:" + p + "W");
 
 				// http://yoursite/api/api.php?json={testA:200,testB:400}
 				// http://aceone.se/emoncms/api/post.php?json={MainPower:1.321}&apikey=daa5d8d5e0814652fb524b07852496
 				String url = "http://aceone.se/emoncms/api/post.php?json={MainPower:" + divide + "}&apikey=daa5d8d5e0814652fb524b07852496";
 				HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-				info(url +" "+ connection.getResponseCode());
+				debug(url +" "+ connection.getResponseCode());
 				if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
 					os.write('c');
 					for (int i = 0; i < power.length(); i++) {
