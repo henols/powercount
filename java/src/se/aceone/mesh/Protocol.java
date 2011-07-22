@@ -10,4 +10,5 @@ public interface Protocol {
 	public final static int INFO = 7;
 	public final static int WARN = 8;
 	public final static int ERROR = 9;
+	public final static int DEBUG = 10;
 }

@@ -126,6 +126,9 @@ public abstract class Node extends Thread implements Protocol {
 		System.exit(0);
 	}
 
+	void debug(String message) {
+		writeLog(DEBUG, message);
+	}
 	void info(String message) {
 		writeLog(INFO, message);
 	}

@@ -1,6 +1,5 @@
 package se.aceone.mesh;
 
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -21,6 +20,10 @@ public class Logger implements Protocol {
 		this.type = type;
 		this.name = name;
 		this.key = key;
+	}
+
+	public void debug(String message) {
+		writeLog(DEBUG, message);
 	}
 
 	public void info(String message) {
@@ -47,9 +50,11 @@ public class Logger implements Protocol {
 		sb.append(df.format(d));
 		sb.append(" ");
 		
-		if (logLevel == INFO) {
+		if (logLevel == DEBUG) {
+			sb.append("DEBUG:   ");
+		} else if (logLevel == INFO) {
 			sb.append("INFO:    ");
-		} else if (logLevel == WARN) {
+			} else if (logLevel == WARN) {
 			sb.append("WARNING: ");
 		} else if (logLevel == ERROR) {
 			sb.append("ERROR:   ");
