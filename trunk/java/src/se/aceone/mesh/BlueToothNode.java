@@ -16,7 +16,7 @@ import org.apache.commons.cli.Options;
 
 public class BlueToothNode extends Node {
 
-	private int updateRate = 10;
+	private int updateRate = 60;
 
 	public BlueToothNode(String[] args) {
 		super("BlueToothNode", args);
@@ -76,22 +76,23 @@ public class BlueToothNode extends Node {
 				int p = Integer.parseInt(power);
 				BigDecimal b = new BigDecimal(power);
 				BigDecimal divide = b.divide(new BigDecimal(1000), 3, BigDecimal.ROUND_HALF_UP);
-				total += ((double) p) / 1000;
-				debug("Meter value:" + (total) + "kW Total:" + divide + "kW Last:" + p + "W");
+				total += divide.doubleValue();
+				debug("Meter value:" + (total) + "kW Total:" + divide + "kW " + p + " pulses");
 
+				
 				// http://yoursite/api/api.php?json={testA:200,testB:400}
 				// http://aceone.se/emoncms/api/post.php?json={MainPower:1.321}&apikey=daa5d8d5e0814652fb524b07852496
-				String url = "http://aceone.se/emoncms/api/post.php?json={MainPower:" + divide + "}&apikey=daa5d8d5e0814652fb524b07852496";
-				HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-				debug(url +" "+ connection.getResponseCode());
-				if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+//				String url = "http://aceone.se/emoncms/api/post.php?json={MainPower:" + divide + "}&apikey=daa5d8d5e0814652fb524b07852496";
+//				HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+//				debug(url +" "+ connection.getResponseCode());
+//				if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
 					os.write('c');
 					for (int i = 0; i < power.length(); i++) {
 						byte charAt = (byte) power.charAt(i);
 						os.write(charAt);
 					}
 					os.write('\n');
-				}
+//				}
 			} catch (IOException e1) {
 				error(e1.getMessage());
 			}
