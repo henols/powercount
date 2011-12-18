@@ -17,7 +17,9 @@ import org.apache.commons.cli.PosixParser;
 
 public class Agent extends Thread implements Protocol {
 
-	String[] cmds = { "se.aceone.mesh.BlueToothNode -b 00195DEE230B",
+	String[] cmds = { 
+			"se.aceone.mesh.BlueToothNode -b 00195DEE230B",
+			//"se.aceone.mesh.ComportNode -p COM8",
 	// "se.aceone.mesh.Node -bt 00195DEE230X"
 	};
 
