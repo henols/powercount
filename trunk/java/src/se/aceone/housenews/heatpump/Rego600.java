@@ -1,5 +1,11 @@
 package se.aceone.housenews.heatpump;
 
+/**
+ * Rego600 heat pump controler interface
+ * See http://rago600.sourceforge.net/ for more info.
+ * Thanks Jindrich Fucik for diging this out. 
+ * If You are using this java code I think You have to drop Jindrich a post card.  
+ */
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -10,9 +16,9 @@ import java.util.Date;
 
 public class Rego600 {
 
-	private static final byte REGO_600 = (byte) 0x81;
+	static final byte REGO_600 = (byte) 0x81;
 
-	// 1 - address 5char 16bit number Read from front panel (keyboard+leds) {reg 09FF+xx}
+	// 1 - address 5char 16bit number Read from front panel (keyboard+leds) {reg09FF+xx}
 	private static final byte PANEL_R = (byte) 0x00;
 	// 2 - address + data 1char confirm Write to front panel (keyboard+leds) {reg 09FF+xx}
 	private static final byte PANEL_W = (byte) 0x01;
@@ -35,11 +41,11 @@ public class Rego600 {
 	// 0 42char text line Read previous error line (prev from last reading) [4100/01]
 	private static final byte ERROR_PREVIUS = (byte) 0x42;
 	// 0 5char 16bit number Read rego version {constant 0258 = 600 ?Rego 600?}
-	private static final byte VERSION = (byte) 0x7F;
+	public static final byte VERSION = (byte) 0x7F;
 
 	// Rego636-... Register
 	// Sensor values
-	public static final int RADIATOR_RETURN_GT1 = 0x020B; // Radiator return [GT1]
+	public static final int RADIATOR_RETURN_GT1 = 0x020B; // Radiator return[GT1]
 	public static final int OUTDOOR_TEMP_GT2 = 0x020C; // Outdoor [GT2]
 	public static final int HOT_WATER_GT3 = 0x020D; // Hot water [GT3]
 	public static final int FORWARD_GT4 = 0x020E; // Forward [GT4]
@@ -53,7 +59,7 @@ public class Rego600 {
 
 	// Device values
 	public static final int GROUND_LOOP_PUMP_P3 = 0x01FF; // Ground loop pump [P3]
-	public static final int COMPRESSOR = 0x0200; // Compresor
+	public static final int COMPRESSOR = 0x0200; // Compressor
 	public static final int ADDITIONAL_HEAT_STEP_1 = 0x0201; // Additional heat 3kW
 	public static final int ADDITIONAL_HEAT_STEP_2 = 0x0202; // Additional heat 6kW
 	public static final int RADIATOR_PUMP_P1 = 0x0205; // Radiator pump [P1]
@@ -158,6 +164,9 @@ public class Rego600 {
 	}
 
 	public double getRegisterValueTemperature(int register) throws IOException, DataException {
+		if (register >= RADIATOR_RETURN_GT1 && register <= HOT_WATER_EXTERNAL_GT3X) {
+			register -= 2;
+		}
 		double d = getValue(REGO_600, REGISTER_R, register) * .1;
 		BigDecimal bd = new BigDecimal(d);
 		bd = bd.setScale(1, BigDecimal.ROUND_HALF_UP);
@@ -233,7 +242,8 @@ public class Rego600 {
 		}
 
 		// if (result[result.length - 1] != checksum) {
-		// throw new DataException("Bad checksum " + result[result.length - 1] + " != " + checksum);
+		// throw new DataException("Bad checksum " + result[result.length - 1] +
+		// " != " + checksum);
 		// }
 
 		return result;
@@ -243,37 +253,135 @@ public class Rego600 {
 		outputStream.write(data);
 	}
 
-
 	public static void main(String[] args) throws IOException, DataException {
-//		try {
-//			System.out.println(new Alarm((byte) 2, new Date(), null));
-//			Rego600 rego600 = new Rego600("COM9");
-//			try {
-//				double temp = rego600.getRegisterValueTemperature(HEAT_CURVE);
-//				System.out.println("Heat curve 0x0000=" + temp);
-//			} catch (DataException e) {
-//				System.out.println(e.getMessage());
-//			}
-//			try {
-//				double temp = rego600.getRegisterValueTemperature(RADIATOR_RETURN_GT1);
-//				System.out.println("Radiator return 0x020B=" + temp);
-//			} catch (DataException e) {
-//				System.out.println(e.getMessage());
-//			}
-//
-//			Alarm alarm = rego600.getLastAlarm();
-//			System.out.println(alarm);
-//			while ((alarm = rego600.getPreviusAlarm()) != null) {
-//				System.out.println(alarm);
-//			}
-//
-//			rego600.close();
-//
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		} finally {
-//			System.exit(0);
-//		}
+		// try {
+		// System.out.println(new Alarm((byte) 2, new Date(), null));
+		// Rego600 rego600 = new Rego600("COM9");
+		// try {
+		// double temp = rego600.getRegisterValueTemperature(HEAT_CURVE);
+		// System.out.println("Heat curve 0x0000=" + temp);
+		// } catch (DataException e) {
+		// System.out.println(e.getMessage());
+		// }
+		// try {
+		// double temp = rego600.getRegisterValueTemperature(RADIATOR_RETURN_GT1);
+		// System.out.println("Radiator return 0x020B=" + temp);
+		// } catch (DataException e) {
+		// System.out.println(e.getMessage());
+		// }
+		//
+		// Alarm alarm = rego600.getLastAlarm();
+		// System.out.println(alarm);
+		// while ((alarm = rego600.getPreviusAlarm()) != null) {
+		// System.out.println(alarm);
+		// }
+		//
+		// rego600.close();
+		//
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// } finally {
+		// System.exit(0);
+		// }
 	}
 
+	public static String translateRegister(int register) {
+		switch (register) {
+		case RADIATOR_RETURN_GT1:
+			return "Radiator return [GT1]";
+		case OUTDOOR_TEMP_GT2:
+			return "Outdoor [GT2]";
+		case HOT_WATER_GT3:
+			return "Hot water [GT3]";
+		case FORWARD_GT4:
+			return "Forward [GT4]";
+		case ROOM_GT5:
+			return "Room [GT5]";
+		case COMPRESSOR_GT6:
+			return "Compressor [GT6]";
+		case HEAT_FLUID_OUT_GT8:
+			return "Heat fluid out [GT8]";
+		case HEAT_FLUID_IN_GT9:
+			return "Heat fluid in [GT9]";
+		case TRANSFER_FLUID_IN_GT10:
+			return "Cold fluid in[GT10]";
+		case TRANSFER_FLUID_OUT_GT11:
+			return "Cold fluid out[GT11]";
+		case HOT_WATER_EXTERNAL_GT3X:
+			return "External hotwater [GT3x]";
+
+			// Device values
+		case GROUND_LOOP_PUMP_P3:
+			return "Ground loop pump [P3]";
+		case COMPRESSOR:
+			return "Compresor";
+		case ADDITIONAL_HEAT_STEP_1:
+			return "Additional heat 3kW";
+		case ADDITIONAL_HEAT_STEP_2:
+			return "Additional heat 6kW";
+		case RADIATOR_PUMP_P1:
+			return "Radiator pump [P1]";
+		case HEAT_CARRIER_PUMP_P2:
+			return "Heat carrier pump [P2]";
+		case THREE_WAY_VALVE:
+			return "Tree-way valve [VXV]";
+		case ALARM:
+			return "Alarm";
+
+			// Control data
+		case ADDED_HEAT_POWER:
+			return "Add heat power in %";
+		case GT4_TARGET_VALUE:
+			return "GT4 Target value";
+		case GT1_TARGET_VALUE:
+			return "GT1 Target value";
+		case GT1_ON_VALUE:
+			return "GT1 On value";
+		case GT1_OFF_VALUE:
+			return "GT1 Off value";
+		case GT3_TARGET_VALUE:
+			return "GT3 Target value";
+		case GT3_ON_VALUE:
+			return "GT3 On value";
+		case GT3_OFF_VALUE:
+			return "GT3 Off value";
+
+			// Settings
+		case HEAT_CURVE:
+			return "Heat curve";
+		case HEAT_CURVE_FINE:
+			return "Heat curve fine adj.";
+		case HEAT_CURVE_COUPLING_DIFF:
+			return "Heat curve coupling diff.";
+		case ADJ_CURVE_AT_N35_DGR_OUT:
+			return "Adj. curve at -35° out";
+		case ADJ_CURVE_AT_N30_DGR_OUT:
+			return "Adj. curve at -30° out";
+		case ADJ_CURVE_AT_N25_DGR_OUT:
+			return "Adj. curve at -25° out";
+		case ADJ_CURVE_AT_N20_DGR_OUT:
+			return "Adj. curve at -20° out";
+		case ADJ_CURVE_AT_N15_DGR_OUT:
+			return "Adj. curve at -15° out";
+		case ADJ_CURVE_AT_N10_DGR_OUT:
+			return "Adj. curve at -10° out";
+		case ADJ_CURVE_AT_N5_DGR_OUT:
+			return "Adj. curve at -5° out";
+		case ADJ_CURVE_AT_0_DGR_OUT:
+			return "Adj. curve at 0° out";
+		case ADJ_CURVE_AT_5_DGR_OUT:
+			return "Adj. curve at 5° out";
+		case ADJ_CURVE_AT_10_DGR_OUT:
+			return "Adj. curve at 10° out";
+		case ADJ_CURVE_AT_15_DGR_OUT:
+			return "Adj. curve at 15° out";
+		case ADJ_CURVE_AT_20_DGR_OUT:
+			return "Adj. curve at 20° out";
+		case INDOOR_TEMP_SETTING:
+			return "Indoor temp setting";
+		case CURVE_INFL_IN_TEMP:
+			return "Curve infl. by in-temp.";
+		}
+		return null;
+	}
 }

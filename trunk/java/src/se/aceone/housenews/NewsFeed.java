@@ -30,6 +30,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
+import se.aceone.housenews.heatpump.HeatPump;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 import twitter4j.TwitterFactory;
@@ -46,10 +47,12 @@ public class NewsFeed {
 	private boolean running = true;
 	private Twitter twitter;
 	private List<News> news = new ArrayList<News>();
-	private String bluetoothAddress;
+	private String powerMeterBluetoothAddress;
+	private final String heatPumpBluetoothAddress;
 
-	NewsFeed(String bluetoothAddress) {
-		this.bluetoothAddress = bluetoothAddress;
+		public NewsFeed(String powerMeterBluetoothAddress, String heatPumpBluetoothAddress) {
+		this.powerMeterBluetoothAddress = powerMeterBluetoothAddress;
+		this.heatPumpBluetoothAddress = heatPumpBluetoothAddress;
 		init();
 		process();
 	}
@@ -64,20 +67,21 @@ public class NewsFeed {
 			e.printStackTrace();
 		}
 		logger.debug("Adding power meter.");
-		news.add(new PowerMeter(bluetoothAddress));
-
+		news.add(new PowerMeter(powerMeterBluetoothAddress));
+		logger.debug("Adding heat pump.");
+		news.add(new HeatPump(heatPumpBluetoothAddress));
 		for (News newsItem : news) {
 			try {
 				newsItem.init();
 			} catch (Exception e) {
-				logger.error("Cant init newsItem '" + newsItem.getClass().getSimpleName() + "'");
+				logger.error("Cant init newsItem '" + newsItem.getClass().getSimpleName() + "'", e);
 			}
 		}
 
 	}
 
 	public void process() {
-		while (true) {
+		while (running) {
 			for (News newsItem : news) {
 				newsItem.tweet(twitter);
 			}
@@ -139,7 +143,8 @@ public class NewsFeed {
 	public static void main(String[] args) {
 		// BasicConfigurator.configure();
 		Options options = new Options();
-		options.addOption("b", true, "bluetooth address");
+		options.addOption("pmb", true, "Power Meter bluetooth address");
+		options.addOption("hpb", true, "Heat Pump bluetooth address");
 		CommandLineParser parser = new PosixParser();
 
 		CommandLine cmd = null;
@@ -149,9 +154,10 @@ public class NewsFeed {
 			logger.error("Command line parsing failed.", e);
 			System.exit(1);
 		}
-		String bluetoothAddress = cmd.getOptionValue('b');
+		String powerMeterBluetoothAddress = cmd.getOptionValue("pmb");
+		String heatPumpBluetoothAddress = cmd.getOptionValue("hpb");
 		// twitter.
-		new NewsFeed(bluetoothAddress);
+		new NewsFeed(powerMeterBluetoothAddress, heatPumpBluetoothAddress);
 	}
 
 }
