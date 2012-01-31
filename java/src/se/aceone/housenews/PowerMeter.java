@@ -12,7 +12,7 @@ import twitter4j.TwitterException;
 
 public class PowerMeter extends BlueToothNews {
 	private static final boolean DAYS = true;
-	private static final boolean CLEAR_COUNT = DAYS;
+	private static final boolean CLEAR_COUNT = true;
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
 	private static final long PING_TIME = 60000;
 
@@ -54,7 +54,7 @@ public class PowerMeter extends BlueToothNews {
 							break;
 						}
 					}
-					// logger.debug("ping : " + sb);
+//					logger.debug("ping : " + sb.toString().trim());
 					pingTime += PING_TIME;
 				} catch (IOException e) {
 					logger.error(e);
