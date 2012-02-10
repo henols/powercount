@@ -1,5 +1,7 @@
 
 #define RESET_TIME 60000
+#define COUNTER_1 0
+#define COUNTER_2 1
 
 const byte CONFIRM = 'c';
 const byte NAME = '3';
@@ -10,8 +12,12 @@ const byte LED_PIN_1 = 13; // LED connected to digital pin 13
 const byte LED_PIN_2 = 14; // LED connected to digital pin 13
 const byte BT_RESET_PIN = 15; // BlueToothe module reset
 
+const byte LED_PINS[2] = {LED_PIN_1,LED_PIN_2};
+
 const byte PULSE_PIN_1 = 2; //
 const byte PULSE_PIN_2 = 3; //
+
+
 
 long pulseCount[2] = { 0, 0 }; //Number of pulses, used to measure energy.
 unsigned long pulseTime[2], lastTime[2]; //Used to measure power.
@@ -60,29 +66,24 @@ void loop() {
 }
 
 void onPulse1() {
-	digitalWrite(LED_PIN_1, HIGH); //flash LED - very quickly  
-
-	lastTime[0] = pulseTime[0]; //used to measure time between pulses.
-	pulseTime[0] = micros();
-
-	pulseCount[0]++; //pulseCounter               
-
-	power[0] = int((3600000000.0 / (pulseTime[0] - lastTime[0])) / ppwh[0]); //Calculate power
-
-	digitalWrite(LED_PIN_1, LOW);
+	onPulse(COUNTER_1);  
 }
 
 void onPulse2() {
-	digitalWrite(LED_PIN_2, HIGH); //flash LED - very quickly  
+	onPulse(COUNTER_2);  
+}
 
-	lastTime[1] = pulseTime[1]; //used to measure time between pulses.
-	pulseTime[1] = micros();
+void onPulse(int counter) {
+	digitalWrite(LED_PINS[counter], HIGH); //flash LED - very quickly  
 
-	pulseCount[1]++; //pulseCounter               
+	lastTime[counter] = pulseTime[counter]; //used to measure time between pulses.
+	pulseTime[counter] = micros();
 
-	power[1] = int((3600000000.0 / (pulseTime[1] - lastTime[1])) / ppwh[1]); //Calculate power
+	pulseCount[counter]++; //pulseCounter               
 
-	digitalWrite(LED_PIN_2, LOW);
+	power[counter] = int((3600000000.0 / (pulseTime[counter] - lastTime[counter])) / ppwh[counter]); //Calculate power
+
+	digitalWrite(LED_PINS[counter], LOW);
 }
 
 void confirmCount(byte ind) {
