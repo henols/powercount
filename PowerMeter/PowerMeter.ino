@@ -1,4 +1,3 @@
-
 #define RESET_TIME 60000
 #define COUNTER_1 0
 #define COUNTER_2 1
@@ -12,12 +11,10 @@ const byte LED_PIN_1 = 13; // LED connected to digital pin 13
 const byte LED_PIN_2 = 14; // LED connected to digital pin 13
 const byte BT_RESET_PIN = 15; // BlueToothe module reset
 
-const byte LED_PINS[2] = {LED_PIN_1,LED_PIN_2};
+const byte LED_PINS[2] = { LED_PIN_1, LED_PIN_2 };
 
 const byte PULSE_PIN_1 = 2; //
 const byte PULSE_PIN_2 = 3; //
-
-
 
 long pulseCount[2] = { 0, 0 }; //Number of pulses, used to measure energy.
 unsigned long pulseTime[2], lastTime[2]; //Used to measure power.
@@ -26,7 +23,7 @@ int ppwh[2] = { 1, 1 }; ////1000 pulses/kwh = 1 pulse per wh - Number of pulses 
 
 long lastSerial;
 
-boolean ledState[] = {false, false};
+boolean ledState[] = { false, false };
 
 void setup() {
 	pinMode(LED_PIN_1, OUTPUT); // sets the digital pin as output
@@ -37,12 +34,12 @@ void setup() {
 
 	Serial.begin(BAUD_RATE);
 	pinMode(BT_RESET_PIN, OUTPUT); // sets the digital pin as output
-	
+
 	resetBtModule();
 
 	attachInterrupt(0, onPulse1, FALLING); // KWH interrupt attached to IRQ 1  = pin2 
 	attachInterrupt(1, onPulse2, FALLING); // KWH interrupt attached to IRQ 1  = pin3
-	
+
 	changeLedState(COUNTER_1);
 	changeLedState(COUNTER_2);
 
@@ -72,11 +69,11 @@ void loop() {
 }
 
 void onPulse1() {
-	onPulse(COUNTER_1);  
+	onPulse(COUNTER_1);
 }
 
 void onPulse2() {
-	onPulse(COUNTER_2);  
+	onPulse(COUNTER_2);
 }
 
 void onPulse(int counter) {
@@ -121,10 +118,9 @@ void getCountText(byte ind) {
 	Serial.println(power[ind], DEC);
 }
 
-
-void changeLedState(byte counter){
+void changeLedState(byte counter) {
 	ledState[counter] != ledState[counter];
-	digitalWrite(LED_PINS[counter], ledState[counter]);   
+	digitalWrite(LED_PINS[counter], ledState[counter]);
 }
 
 void resetBtModule() {
