@@ -26,19 +26,25 @@ int ppwh[2] = { 1, 1 }; ////1000 pulses/kwh = 1 pulse per wh - Number of pulses 
 
 long lastSerial;
 
-boolean ledState = false;
-
-unsigned long pulses = 0;
+boolean ledState[] = {false, false};
 
 void setup() {
-	Serial.begin(BAUD_RATE);
 	pinMode(LED_PIN_1, OUTPUT); // sets the digital pin as output
 	pinMode(LED_PIN_2, OUTPUT); // sets the digital pin as output
+
+	changeLedState(COUNTER_1);
+	changeLedState(COUNTER_2);
+
+	Serial.begin(BAUD_RATE);
 	pinMode(BT_RESET_PIN, OUTPUT); // sets the digital pin as output
+	
 	resetBtModule();
 
 	attachInterrupt(0, onPulse1, FALLING); // KWH interrupt attached to IRQ 1  = pin2 
-	attachInterrupt(1, onPulse2, FALLING); // KWH interrupt attached to IRQ 1  = pin3 
+	attachInterrupt(1, onPulse2, FALLING); // KWH interrupt attached to IRQ 1  = pin3
+	
+	changeLedState(COUNTER_1);
+	changeLedState(COUNTER_2);
 
 }
 
@@ -74,7 +80,7 @@ void onPulse2() {
 }
 
 void onPulse(int counter) {
-	digitalWrite(LED_PINS[counter], HIGH); //flash LED - very quickly  
+	changeLedState(counter);
 
 	lastTime[counter] = pulseTime[counter]; //used to measure time between pulses.
 	pulseTime[counter] = micros();
@@ -82,8 +88,6 @@ void onPulse(int counter) {
 	pulseCount[counter]++; //pulseCounter               
 
 	power[counter] = int((3600000000.0 / (pulseTime[counter] - lastTime[counter])) / ppwh[counter]); //Calculate power
-
-	digitalWrite(LED_PINS[counter], LOW);
 }
 
 void confirmCount(byte ind) {
@@ -106,13 +110,6 @@ void confirmCount(byte ind) {
 	}
 }
 
-void resetBtModule() {
-	digitalWrite(BT_RESET_PIN, LOW);
-	delay(10);
-	digitalWrite(BT_RESET_PIN, HIGH);
-	lastSerial = millis();
-}
-
 void getName() {
 	Serial.println("Main power");
 }
@@ -122,5 +119,18 @@ void getCountText(byte ind) {
 	Serial.println(pulseCount[ind], DEC);
 	Serial.print(",power:");
 	Serial.println(power[ind], DEC);
+}
+
+
+void changeLedState(byte counter){
+	ledState[counter] != ledState[counter];
+	digitalWrite(LED_PINS[counter], ledState[counter]);   
+}
+
+void resetBtModule() {
+	digitalWrite(BT_RESET_PIN, LOW);
+	delay(10);
+	digitalWrite(BT_RESET_PIN, HIGH);
+	lastSerial = millis();
 }
 
