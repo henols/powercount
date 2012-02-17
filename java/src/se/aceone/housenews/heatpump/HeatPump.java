@@ -2,12 +2,15 @@ package se.aceone.housenews.heatpump;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.StringTokenizer;
 
 import org.apache.log4j.Logger;
 
@@ -16,6 +19,31 @@ import twitter4j.Twitter;
 import twitter4j.TwitterException;
 
 public class HeatPump extends BlueToothNews {
+
+	public static final int[] TEMPS = new int[] { //
+	Rego600.RADIATOR_RETURN_GT1, // Radiator return[GT1]
+			// Rego600.OUTDOOR_TEMP_GT2, // Outdoor [GT2]
+			Rego600.HOT_WATER_GT3, // Hot water [GT3]
+			Rego600.FORWARD_GT4, // Forward [GT4]
+			Rego600.ROOM_GT5, // Room [GT5]
+			Rego600.COMPRESSOR_GT6, // Compressor [GT6]
+			Rego600.HEAT_FLUID_OUT_GT8, // Heat fluid out [GT8]
+			Rego600.HEAT_FLUID_IN_GT9, // Heat fluid in [GT9]
+			Rego600.TRANSFER_FLUID_IN_GT10, // Cold fluid in [GT10]
+			Rego600.TRANSFER_FLUID_OUT_GT11, // Cold fluid out [GT11]
+			Rego600.HOT_WATER_EXTERNAL_GT3X, // External hot water [GT3x]
+	};
+	public static final int[] SENSORS = new int[] { //
+		Rego600.GROUND_LOOP_PUMP_P3, // Ground loop pump [P3]
+		Rego600.COMPRESSOR, // Compressor
+		Rego600.ADDITIONAL_HEAT_STEP_1, // Additional heat 3kW
+		Rego600.ADDITIONAL_HEAT_STEP_2, // Additional heat 6kW
+		Rego600.RADIATOR_PUMP_P1, // Radiator pump [P1]
+		Rego600.HEAT_CARRIER_PUMP_P2, // Heat carrier pump [P2]
+		Rego600.THREE_WAY_VALVE, // Tree-way valve [VXV]
+		Rego600.ALARM, // Alarm
+	};
+
 	private static final boolean DAYS = true;
 	private static final boolean CLEAR_COUNT = DAYS;
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
@@ -49,6 +77,19 @@ public class HeatPump extends BlueToothNews {
 		rego600 = new Rego600(os, is);
 	}
 
+	static String toCamelCase(String s) {
+		StringTokenizer st = new StringTokenizer(s, " -_[]");
+		String camelCaseString = "";
+		while (st.hasMoreTokens()) {
+			String part = st.nextToken();
+			camelCaseString += part.substring(0, 1).toUpperCase();
+			if (part.length() > 1) {
+				camelCaseString += part.substring(1).toLowerCase();
+			}
+		}
+		return camelCaseString;
+	}
+
 	@Override
 	public void tweet(Twitter twitter) {
 		Calendar now = Calendar.getInstance();
@@ -58,6 +99,25 @@ public class HeatPump extends BlueToothNews {
 			if (System.currentTimeMillis() > pingTime) {
 				try {
 					double outDoorTemp = rego600.getRegisterValueTemperature(Rego600.OUTDOOR_TEMP_GT2);
+					StringBuffer post = new StringBuffer();
+					for (int reg : TEMPS) {
+						post.append(toCamelCase(Rego600.translateRegister(reg)));
+						post.append(':');
+						post.append(rego600.getRegisterValueTemperature(reg));
+						post.append(',');
+					}
+					for (int reg : SENSORS) {
+						post.append(toCamelCase(Rego600.translateRegister(reg)));
+						post.append(':');
+						post.append(rego600.getRegisterValue(reg));
+						post.append(',');
+					}
+					post.append("OutDoorTemp:");
+					post.append(outDoorTemp);
+
+					String url = "http://localhost/emon/api/post?json={" + post.toString() + "}&apikey=3b8b6b6204d4a6b34868ebb36fe14886";
+					HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+					logger.debug(url + " " + connection.getResponseCode());
 
 					if (outDoorTemp > max) {
 						max = outDoorTemp;
@@ -71,8 +131,8 @@ public class HeatPump extends BlueToothNews {
 					values.add(outDoorTemp);
 
 					double average = getAverage();
-					logger.debug("average:" + average + " max:" + max + " at " + hhMM.format(new Date(maxStamp))
-							+ " min:" + min + " at " + hhMM.format(new Date(minStamp)) + " now:" + outDoorTemp);
+					logger.debug("average:" + average + " max:" + max + " at " + hhMM.format(new Date(maxStamp)) + " min:" + min + " at "
+							+ hhMM.format(new Date(minStamp)) + " now:" + outDoorTemp);
 					pingTime += PING_TIME;
 				} catch (IOException e) {
 					logger.error(e);
@@ -86,9 +146,8 @@ public class HeatPump extends BlueToothNews {
 		}
 
 		double average = getAverage();
-		String status = "Last day's temperatures, average:" + average + " max:" + max + " at "
-				+ hhMM.format(new Date(maxStamp)) + "  min:" + min + " at " + hhMM.format(new Date(minStamp))
-				+ ". #temperature #smarthome";
+		String status = "Last day's temperatures, average:" + average + " max:" + max + " at " + hhMM.format(new Date(maxStamp)) + "  min:" + min + " at "
+				+ hhMM.format(new Date(minStamp)) + ". #temperature #smarthome";
 		logger.debug(status + " l:" + status.length());
 		try {
 			twitter.updateStatus(status);
@@ -107,8 +166,8 @@ public class HeatPump extends BlueToothNews {
 			total += value;
 		}
 		double average = total / values.size();
-		int ix = (int)(average * 10.0); // scale it 
-		return ((double)ix)/10.0;
+		int ix = (int) (average * 10.0); // scale it
+		return ((double) ix) / 10.0;
 	}
 
 	private Calendar getNextTweetTime() {
@@ -141,12 +200,20 @@ public class HeatPump extends BlueToothNews {
 	}
 
 	public static void main(String[] args) throws Exception {
-		String bluetoothAddress = "00195dee2307";
-		HeatPump heatPump = new HeatPump(bluetoothAddress);
-		heatPump.init();
-		while (true) {
-			heatPump.tweet(null);
-			Thread.sleep(10000);
-		}
+//		for (int reg : TEMPS) {
+//			System.out.println(toCamelCase(Rego600.translateRegister(reg)));
+//		}
+//		System.out.println();
+//		for (int reg : SENSORS) {
+//			System.out.println(toCamelCase(Rego600.translateRegister(reg)));
+//		}
+
+		 String bluetoothAddress = "00195dee2307";
+		 HeatPump heatPump = new HeatPump(bluetoothAddress);
+		 heatPump.init();
+		 while (true) {
+		 heatPump.tweet(null);
+		 Thread.sleep(10000);
+		 }
 	}
 }

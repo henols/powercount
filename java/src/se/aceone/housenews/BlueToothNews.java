@@ -1,5 +1,6 @@
 package se.aceone.housenews;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -28,4 +29,15 @@ public abstract class BlueToothNews implements News {
 		os = streamConnection.openOutputStream();
 		is = streamConnection.openInputStream();
 	}
+	
+//	public void close(){
+//		try {
+//			is.close();
+//		} catch (IOException e) {
+//		}
+//		try {
+//			os.close();
+//		} catch (IOException e) {
+//		}
+//	}
 }
