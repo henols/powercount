@@ -2,6 +2,8 @@ package se.aceone.housenews;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
@@ -14,10 +16,10 @@ public class PowerMeter extends BlueToothNews {
 	private static final boolean DAYS = true;
 	private static final boolean CLEAR_COUNT = true;
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
-	private static final long PING_TIME = 60000;
+	private static final long PING_TIME = 10000;
 
 	private static Logger logger = Logger.getLogger(PowerMeter.class);
-	private String total;
+	private double oldKWh = Double.NaN;
 
 	private long pingTime;
 
@@ -54,9 +56,17 @@ public class PowerMeter extends BlueToothNews {
 							break;
 						}
 					}
+					double kWh = toKWh(sb.substring(sb.indexOf(":") + 1).trim());
+					if(!Double.isNaN(oldKWh)){
+						double nKWh = kWh - oldKWh; 
+						String url = "http://localhost/emon/api/post?json={kWh:" +nKWh + "}&apikey=3b8b6b6204d4a6b34868ebb36fe14886";
+						HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+						logger.debug(url + " " + connection.getResponseCode());
+					}
+					oldKWh = kWh;
 //					logger.debug("ping : " + sb.toString().trim());
 					pingTime += PING_TIME;
-				} catch (IOException e) {
+				} catch (Exception e) {
 					logger.error(e);
 //					tweetError(twitter, e);
 					reconnect(twitter);
@@ -80,11 +90,10 @@ public class PowerMeter extends BlueToothNews {
 				}
 			}
 			String power = sb.substring(sb.indexOf(":") + 1).trim();
-			int p = Integer.parseInt(power);
-			BigDecimal b = new BigDecimal(power);
-			BigDecimal divide = b.divide(new BigDecimal(1000), 3, BigDecimal.ROUND_HALF_UP);
-			total += divide.doubleValue();
-			String status = "Last day's power consumption for the house were " + divide + "kWh. #tweetawatt #smarthome";
+
+			double kWh = toKWh(power);
+			oldKWh = 0;
+			String status = "Last day's power consumption for the house were " + kWh + "kWh. #tweetawatt #smarthome";
 			logger.debug(status);
 			try {
 				twitter.updateStatus(status);
@@ -99,13 +108,37 @@ public class PowerMeter extends BlueToothNews {
 				}
 				os.write('\n');
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			logger.error(e);
 //			tweetError(twitter, e);
 			reconnect(twitter);
 			return;
 		}
 		nextTweet = getNextTweetTime();
+	}
+
+//	private double toKWh(String power) throws NumberFormatException {
+//		BigDecimal b = new BigDecimal(power);
+//		BigDecimal divide = b.divide(new BigDecimal(1000), 3, BigDecimal.ROUND_HALF_UP);
+//		double kWh = divide.doubleValue();
+//		return kWh;
+//		return ((double)Integer.parseInt(power))/1000;
+//	}
+	
+	private static double toKWh(String power) {
+		if(power.length()==1){
+			power = "0.00"+power;
+		}else  if(power.length()==2){
+			power = "0.0"+power;
+		}else  if(power.length()==3){
+			power = "0."+power;
+		} else {
+			int l = power.length();
+			power = power.substring(0,l-3)+"."+power.substring(l-3);
+		}
+				
+		return Double.parseDouble(power);
+		
 	}
 
 	private void reconnect(Twitter twitter) {
@@ -147,6 +180,13 @@ public class PowerMeter extends BlueToothNews {
 		}
 		logger.debug("Creating new next time: " + sdf.format(nextTime.getTime()));
 		return nextTime;
+	}
+	public static void main(String[] args) {
+		System.out.println(toKWh("16"));
+		System.out.println(toKWh("124"));
+		System.out.println(toKWh("1"));
+		System.out.println(toKWh("1234"));
+		System.out.println(toKWh("123s4"));
 	}
 
 }
