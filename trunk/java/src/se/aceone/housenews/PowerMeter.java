@@ -1,7 +1,5 @@
 package se.aceone.housenews;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -12,7 +10,7 @@ import org.apache.log4j.Logger;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 
-public class PowerMeter extends BlueToothNews {
+public class PowerMeter extends SerialPortNews {
 	private static final boolean DAYS = true;
 	private static final boolean CLEAR_COUNT = true;
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
@@ -25,8 +23,8 @@ public class PowerMeter extends BlueToothNews {
 
 	private Calendar nextTweet;
 
-	public PowerMeter(String bluetoothAddress) {
-		super(bluetoothAddress);
+	public PowerMeter(String port) {
+		super(port);
 	}
 
 	@Override
@@ -181,12 +179,10 @@ public class PowerMeter extends BlueToothNews {
 		logger.debug("Creating new next time: " + sdf.format(nextTime.getTime()));
 		return nextTime;
 	}
-	public static void main(String[] args) {
-		System.out.println(toKWh("16"));
-		System.out.println(toKWh("124"));
-		System.out.println(toKWh("1"));
-		System.out.println(toKWh("1234"));
-		System.out.println(toKWh("123s4"));
+	
+	public static void main(String[] args) throws Exception {
+		PowerMeter powerMeter = new PowerMeter("COM3");
+		powerMeter.init();
 	}
 
 }
