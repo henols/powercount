@@ -1,6 +1,5 @@
 package se.aceone.housenews;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -10,7 +9,7 @@ import javax.microedition.io.StreamConnection;
 
 import org.apache.log4j.Logger;
 
-public abstract class BlueToothNews implements News {
+public abstract class BlueToothNews extends News {
 	private static Logger logger = Logger.getLogger(BlueToothNews.class);
 	private final String bluetoothAddress;
 	protected InputStream is = null;
@@ -30,14 +29,4 @@ public abstract class BlueToothNews implements News {
 		is = streamConnection.openInputStream();
 	}
 	
-//	public void close(){
-//		try {
-//			is.close();
-//		} catch (IOException e) {
-//		}
-//		try {
-//			os.close();
-//		} catch (IOException e) {
-//		}
-//	}
 }

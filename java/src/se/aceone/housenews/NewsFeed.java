@@ -50,7 +50,7 @@ public class NewsFeed {
 	private String powerMeterBluetoothAddress;
 	private final String heatPumpBluetoothAddress;
 
-		public NewsFeed(String powerMeterBluetoothAddress, String heatPumpBluetoothAddress) {
+	public NewsFeed(String powerMeterBluetoothAddress, String heatPumpBluetoothAddress) {
 		this.powerMeterBluetoothAddress = powerMeterBluetoothAddress;
 		this.heatPumpBluetoothAddress = heatPumpBluetoothAddress;
 		init();
@@ -66,12 +66,17 @@ public class NewsFeed {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		logger.debug("Adding power meter.");
-		news.add(new PowerMeter(powerMeterBluetoothAddress));
-		logger.debug("Adding heat pump.");
-		news.add(new HeatPump(heatPumpBluetoothAddress));
+		if (powerMeterBluetoothAddress != null) {
+			logger.debug("Adding power meter.");
+			news.add(new PowerMeter(powerMeterBluetoothAddress));
+		}
+		if (heatPumpBluetoothAddress != null) {
+			logger.debug("Adding heat pump.");
+			news.add(new HeatPump(heatPumpBluetoothAddress));
+		}
 		for (News newsItem : news) {
 			try {
+				newsItem.setTwitter(twitter);
 				newsItem.init();
 			} catch (Exception e) {
 				logger.error("Cant init newsItem '" + newsItem.getClass().getSimpleName() + "'", e);
@@ -83,7 +88,7 @@ public class NewsFeed {
 	public void process() {
 		while (running) {
 			for (News newsItem : news) {
-				newsItem.tweet(twitter);
+				newsItem.tick();
 			}
 			try {
 				Thread.sleep(updateRate * 1000);
@@ -93,8 +98,8 @@ public class NewsFeed {
 		}
 	}
 
-	private static void handleAccessToken(Twitter twitter) throws IOException, FileNotFoundException,
-			ClassNotFoundException, TwitterException, URISyntaxException {
+	private static void handleAccessToken(Twitter twitter) throws IOException, FileNotFoundException, ClassNotFoundException, TwitterException,
+			URISyntaxException {
 		AccessToken accessToken = null;
 		File settingsDir = new File(System.getenv("HOMEPATH"), ".housenews");
 		File accessTokenFile = new File(settingsDir, "accessToken");
@@ -140,6 +145,10 @@ public class NewsFeed {
 		twitter.setOAuthAccessToken(accessToken);
 	}
 
+	// 00:19:5d:ee:23:07 heat pump
+	// 00:19:5d:ee:23:0b power meter
+	// -hpb 00195dee2307
+	// -pmb 00195dee230b
 	public static void main(String[] args) {
 		// BasicConfigurator.configure();
 		Options options = new Options();

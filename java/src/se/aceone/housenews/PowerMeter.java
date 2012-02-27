@@ -1,13 +1,16 @@
 package se.aceone.housenews;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.SocketException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.StringTokenizer;
 
 import org.apache.log4j.Logger;
 
-import twitter4j.Twitter;
 import twitter4j.TwitterException;
 
 public class PowerMeter extends SerialPortNews {
@@ -35,40 +38,63 @@ public class PowerMeter extends SerialPortNews {
 	}
 
 	@Override
-	public void tweet(Twitter twitter) {
+	public void tick() {
 		Calendar now = Calendar.getInstance();
 		// logger.debug(sdf.format(now.getTime()) + " before " + sdf.format(nextTweet.getTime()));
 		if (now.before(nextTweet)) {
 			if (System.currentTimeMillis() > pingTime) {
+				StringBuilder sb = new StringBuilder();
 				try { 
-					StringBuilder sb = new StringBuilder();
 					os.write((byte) '4');
+					os.write((byte) '0');
 					os.flush();
 					char c;
 					while ((c = (char) is.read()) != '\n') {
 						sb.append(c);
-						if (sb.length() > 15) {
+						if (sb.length() > 35) {
 							String message = "To mutch to read... '" + sb + "' (ping)";
 							logger.error(message);
 //							tweetError(twitter, message);
 							break;
 						}
 					}
-					double kWh = toKWh(sb.substring(sb.indexOf(":") + 1).trim());
+				} catch (SocketException e) {
+					logger.error("SocketException",e);
+					reconnect();
+					return;
+				} catch (IOException e) {
+					logger.error("IOException",e);
+					reconnect();
+					return;
+				}
+				
+					logger.debug(sb.toString().trim());
+					StringTokenizer st = new StringTokenizer(sb.toString(),",");
+					String counter = st.nextToken();
+					String pulses = st.nextToken();
+					pulses = pulses.substring(pulses.indexOf(":") + 1);
+					String power = st.nextToken();
+					power = power.substring(power.indexOf(":") + 1).trim();
+					logger.debug("pulses:"+pulses+" power:"+power);
+					
+					double kWh = toKWh(pulses);
 					if(!Double.isNaN(oldKWh)){
-						double nKWh = kWh - oldKWh; 
-						String url = "http://localhost/emon/api/post?json={kWh:" +nKWh + "}&apikey=3b8b6b6204d4a6b34868ebb36fe14886";
-						HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-						logger.debug(url + " " + connection.getResponseCode());
+						double nKWh = kWh - oldKWh;
+						//																								  3b8b6b6204d4a6b34868ebb36fe14886
+//						String url = "http://192.168.1.223/emon/api/post?json={kWh:" +nKWh + ",power:" +power + "}&apikey=3b8b6b6204d4a6b34868ebb36fe14886";
+						String values ="kWh:" +nKWh + ",power:" +power ; 
+						try {
+							int result = post(values);
+							logger.debug(result + " " +values);
+						} catch (MalformedURLException e) {
+							logger.error("MalformedURLException",e);
+						} catch (IOException e) {
+							logger.error("IOException",e);
+						}
 					}
 					oldKWh = kWh;
 //					logger.debug("ping : " + sb.toString().trim());
 					pingTime += PING_TIME;
-				} catch (Exception e) {
-					logger.error(e);
-//					tweetError(twitter, e);
-					reconnect(twitter);
-				}
 			}
 			return;
 		}
@@ -76,30 +102,34 @@ public class PowerMeter extends SerialPortNews {
 		try {
 			StringBuilder sb = new StringBuilder();
 			os.write((byte) '4');
+			os.write((byte) '0');
 			os.flush();
 			char c;
 			while ((c = (char) is.read()) != '\n') {
 				sb.append(c);
-				if (sb.length() > 15) {
+				if (sb.length() > 35) {
 					String message = "To mutch to read... '" + sb + "'";
 					logger.error(message);
 //					tweetError(twitter, message);
 					return;
 				}
 			}
+			
+			logger.debug(sb.toString());
 			String power = sb.substring(sb.indexOf(":") + 1).trim();
 
 			double kWh = toKWh(power);
 			oldKWh = 0;
-			String status = "Last day's power consumption for the house were " + kWh + "kWh. #tweetawatt #smarthome";
+			String status = "Last day's power consumption for the house were " + kWh + "kWh. #tweetawatt";
 			logger.debug(status);
 			try {
-				twitter.updateStatus(status);
+				tweet(status);
 			} catch (TwitterException e) {
 				logger.error("Failed to post Twitter maessage.", e);
 			}
 			if (CLEAR_COUNT) {
 				os.write('c');
+				os.write('0');
 				for (int i = 0; i < power.length(); i++) {
 					byte charAt = (byte) power.charAt(i);
 					os.write(charAt);
@@ -108,8 +138,7 @@ public class PowerMeter extends SerialPortNews {
 			}
 		} catch (Exception e) {
 			logger.error(e);
-//			tweetError(twitter, e);
-			reconnect(twitter);
+			reconnect();
 			return;
 		}
 		nextTweet = getNextTweetTime();
@@ -139,24 +168,12 @@ public class PowerMeter extends SerialPortNews {
 		
 	}
 
-	private void reconnect(Twitter twitter) {
+	private void reconnect() {
 		try {
 			logger.debug("Reconecting.");
 			init();
 		} catch (Exception ex) {
 			logger.error(ex);
-			tweetError(twitter, ex);
-		}
-	}
-
-	private void tweetError(Twitter twitter, Exception ex) {
-		tweetError(twitter, ex.getMessage());
-	}
-
-	private void tweetError(Twitter twitter, String message) {
-		try {
-			twitter.updateStatus("PowerMeter: " + message + " #error #smarthome");
-		} catch (TwitterException e2) {
 		}
 	}
 

@@ -9,7 +9,7 @@ import java.io.OutputStream;
 
 import org.apache.log4j.Logger;
 
-public abstract class SerialPortNews implements News {
+public abstract class SerialPortNews extends News {
 	public final static int BAUD_RATE = 19200;
 	private static Logger logger = Logger.getLogger(SerialPortNews.class);
 	private final String portName;
