@@ -16,12 +16,12 @@ public abstract class News {
 
 	public abstract void tick();
 
-	public void tweet(String status) throws TwitterException {
+	public void post2Twitter(String status) throws TwitterException {
 		status += " #smarthome";
 		twitter.updateStatus(status);
 	}
 
-	public final int post(String msg) throws MalformedURLException, IOException {
+	public final int post2Emon(String msg) throws MalformedURLException, IOException {
 		String url = "http://192.168.1.223/emon/api/post?json={" + msg + "}&apikey=" + API_KEY;
 		HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
 		int respCode = connection.getResponseCode();

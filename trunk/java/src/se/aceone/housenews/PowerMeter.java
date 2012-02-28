@@ -1,19 +1,22 @@
 package se.aceone.housenews;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.SocketException;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.StringTokenizer;
-
 import org.apache.log4j.Logger;
-
 import twitter4j.TwitterException;
 
 public class PowerMeter extends SerialPortNews {
+	
+	private static final byte[] READ_METER_1 = {'4','0'};
+	private static final byte[] READ_METER_2 = {'4','1'};
+	private static final byte[] CONFIRM_METER_1 = {'c','0'};
+	private static final byte[] CONFIRM_METER_2 = {'c','1'};
+	
+	
 	private static final boolean DAYS = true;
 	private static final boolean CLEAR_COUNT = true;
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
@@ -40,132 +43,139 @@ public class PowerMeter extends SerialPortNews {
 	@Override
 	public void tick() {
 		Calendar now = Calendar.getInstance();
-		// logger.debug(sdf.format(now.getTime()) + " before " + sdf.format(nextTweet.getTime()));
+		// logger.debug(sdf.format(now.getTime()) + " before " +
+		// sdf.format(nextTweet.getTime()));
 		if (now.before(nextTweet)) {
 			if (System.currentTimeMillis() > pingTime) {
 				StringBuilder sb = new StringBuilder();
-				try { 
-					os.write((byte) '4');
-					os.write((byte) '0');
+				try {
+					os.write(READ_METER_1);
 					os.flush();
 					char c;
-					while ((c = (char) is.read()) != '\n') {
+					while ((c = (char)is.read()) != '\n') {
 						sb.append(c);
 						if (sb.length() > 35) {
 							String message = "To mutch to read... '" + sb + "' (ping)";
 							logger.error(message);
-//							tweetError(twitter, message);
+							// tweetError(twitter, message);
 							break;
 						}
 					}
 				} catch (SocketException e) {
-					logger.error("SocketException",e);
+					logger.error("SocketException", e);
 					reconnect();
 					return;
 				} catch (IOException e) {
-					logger.error("IOException",e);
+					logger.error("IOException", e);
 					reconnect();
 					return;
 				}
-				
-					logger.debug(sb.toString().trim());
-					StringTokenizer st = new StringTokenizer(sb.toString(),",");
-					String counter = st.nextToken();
-					String pulses = st.nextToken();
-					pulses = pulses.substring(pulses.indexOf(":") + 1);
-					String power = st.nextToken();
-					power = power.substring(power.indexOf(":") + 1).trim();
-					logger.debug("pulses:"+pulses+" power:"+power);
-					
-					double kWh = toKWh(pulses);
-					if(!Double.isNaN(oldKWh)){
-						double nKWh = kWh - oldKWh;
-						//																								  3b8b6b6204d4a6b34868ebb36fe14886
-//						String url = "http://192.168.1.223/emon/api/post?json={kWh:" +nKWh + ",power:" +power + "}&apikey=3b8b6b6204d4a6b34868ebb36fe14886";
-						String values ="kWh:" +nKWh + ",power:" +power ; 
-						try {
-							int result = post(values);
-							logger.debug(result + " " +values);
-						} catch (MalformedURLException e) {
-							logger.error("MalformedURLException",e);
-						} catch (IOException e) {
-							logger.error("IOException",e);
-						}
+
+				logger.debug(sb.toString().trim());
+				String[] result = splitResult(sb.toString());
+				String counter = result[0];
+				String pulses = result[1];
+				String power = result[2];
+				// logger.debug("pulses:"+pulses+" power:"+power);
+
+				double kWh = toKWh(pulses);
+				if (!Double.isNaN(oldKWh)) {
+					double nKWh = kWh - oldKWh;
+					String values = "kWh:" + nKWh + ",power:" + power;
+					try {
+						int resp = post2Emon(values);
+						logger.debug(resp + " " + values);
+					} catch (MalformedURLException e) {
+						logger.error("MalformedURLException", e);
+					} catch (IOException e) {
+						logger.error("IOException", e);
 					}
-					oldKWh = kWh;
-//					logger.debug("ping : " + sb.toString().trim());
-					pingTime += PING_TIME;
+				}
+				oldKWh = kWh;
+				// logger.debug("ping : " + sb.toString().trim());
+				pingTime += PING_TIME;
 			}
 			return;
 		}
 		logger.debug("Read power counter.");
 		try {
 			StringBuilder sb = new StringBuilder();
-			os.write((byte) '4');
-			os.write((byte) '0');
+			os.write(READ_METER_1);
 			os.flush();
 			char c;
-			while ((c = (char) is.read()) != '\n') {
+			while ((c = (char)is.read()) != '\n') {
 				sb.append(c);
 				if (sb.length() > 35) {
 					String message = "To mutch to read... '" + sb + "'";
 					logger.error(message);
-//					tweetError(twitter, message);
 					return;
 				}
 			}
-			
-			logger.debug(sb.toString());
-			String power = sb.substring(sb.indexOf(":") + 1).trim();
 
-			double kWh = toKWh(power);
+			logger.debug(sb.toString());
+			String[] result = splitResult(sb.toString());
+			String counter = result[0];
+			String pulses = result[1];
+			String power = result[2];
+
+			double kWh = toKWh(pulses);
 			oldKWh = 0;
-			String status = "Last day's power consumption for the house were " + kWh + "kWh. #tweetawatt";
+			String status = "Last day's power consumption for the house were " + kWh + "kWh. Using "+power+"w right now. #tweetawatt";
 			logger.debug(status);
 			try {
-				tweet(status);
+				post2Twitter(status);
 			} catch (TwitterException e) {
 				logger.error("Failed to post Twitter maessage.", e);
 			}
 			if (CLEAR_COUNT) {
-				os.write('c');
-				os.write('0');
-				for (int i = 0; i < power.length(); i++) {
-					byte charAt = (byte) power.charAt(i);
+				os.write(CONFIRM_METER_1);
+				for(int i = 0; i < power.length(); i++) {
+					byte charAt = (byte)power.charAt(i);
 					os.write(charAt);
 				}
 				os.write('\n');
 			}
 		} catch (Exception e) {
-			logger.error(e);
-			reconnect();
+			logger.error("Faild to tweet",e);
 			return;
 		}
 		nextTweet = getNextTweetTime();
 	}
 
-//	private double toKWh(String power) throws NumberFormatException {
-//		BigDecimal b = new BigDecimal(power);
-//		BigDecimal divide = b.divide(new BigDecimal(1000), 3, BigDecimal.ROUND_HALF_UP);
-//		double kWh = divide.doubleValue();
-//		return kWh;
-//		return ((double)Integer.parseInt(power))/1000;
-//	}
-	
+	private String[] splitResult(String result) {
+		String[] r = new String[3];
+		StringTokenizer st = new StringTokenizer(result, ",");
+		r[0] = st.nextToken();
+		String tmp = st.nextToken();
+		r[1] = tmp.substring(tmp.indexOf(":") + 1);
+		tmp = st.nextToken();
+		r[2] = tmp.substring(tmp.indexOf(":") + 1).trim();
+		return r;
+	}
+
+	// private double toKWh(String power) throws NumberFormatException {
+	// BigDecimal b = new BigDecimal(power);
+	// BigDecimal divide = b.divide(new BigDecimal(1000), 3,
+	// BigDecimal.ROUND_HALF_UP);
+	// double kWh = divide.doubleValue();
+	// return kWh;
+	// return ((double)Integer.parseInt(power))/1000;
+	// }
+
 	private static double toKWh(String power) {
-		if(power.length()==1){
-			power = "0.00"+power;
-		}else  if(power.length()==2){
-			power = "0.0"+power;
-		}else  if(power.length()==3){
-			power = "0."+power;
+		if (power.length() == 1) {
+			power = "0.00" + power;
+		} else if (power.length() == 2) {
+			power = "0.0" + power;
+		} else if (power.length() == 3) {
+			power = "0." + power;
 		} else {
 			int l = power.length();
-			power = power.substring(0,l-3)+"."+power.substring(l-3);
+			power = power.substring(0, l - 3) + "." + power.substring(l - 3);
 		}
-				
+
 		return Double.parseDouble(power);
-		
+
 	}
 
 	private void reconnect() {
@@ -196,7 +206,7 @@ public class PowerMeter extends SerialPortNews {
 		logger.debug("Creating new next time: " + sdf.format(nextTime.getTime()));
 		return nextTime;
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		PowerMeter powerMeter = new PowerMeter("COM3");
 		powerMeter.init();
