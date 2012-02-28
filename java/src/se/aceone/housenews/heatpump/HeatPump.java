@@ -143,7 +143,7 @@ public class HeatPump extends BlueToothNews {
 
 				try {
 					logger.debug(post.toString());
-					post(post.toString());
+					post2Emon(post.toString());
 				} catch (MalformedURLException e) {
 					logger.error(e);
 				} catch (IOException e) {
@@ -160,7 +160,7 @@ public class HeatPump extends BlueToothNews {
 				+ hhMM.format(new Date(minStamp)) + ". #temperature";
 		logger.debug(status + " l:" + status.length());
 		try {
-			tweet(status);
+			post2Twitter(status);
 		} catch (TwitterException e) {
 			logger.error("Failed to post Twitter maessage.", e);
 		}
@@ -222,7 +222,7 @@ public class HeatPump extends BlueToothNews {
 		HeatPump heatPump = new HeatPump(bluetoothAddress);
 		heatPump.init();
 		while (true) {
-			heatPump.tweet(null);
+			heatPump.post2Twitter(null);
 			Thread.sleep(10000);
 		}
 	}
