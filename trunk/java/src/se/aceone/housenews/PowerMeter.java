@@ -10,13 +10,12 @@ import org.apache.log4j.Logger;
 import twitter4j.TwitterException;
 
 public class PowerMeter extends SerialPortNews {
-	
-	private static final byte[] READ_METER_1 = {'4','0'};
-	private static final byte[] READ_METER_2 = {'4','1'};
-	private static final byte[] CONFIRM_METER_1 = {'c','0'};
-	private static final byte[] CONFIRM_METER_2 = {'c','1'};
-	
-	
+
+	private static final byte[] READ_METER_1 = { '4', '0' };
+	private static final byte[] READ_METER_2 = { '4', '1' };
+	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
+	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
+
 	private static final boolean DAYS = true;
 	private static final boolean CLEAR_COUNT = true;
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
@@ -77,7 +76,10 @@ public class PowerMeter extends SerialPortNews {
 				String pulses = result[1];
 				String power = result[2];
 				// logger.debug("pulses:"+pulses+" power:"+power);
-
+				if (Long.parseLong(pulses) < 0 || Long.parseLong(power) < 0) {
+					logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
+					return;
+				}
 				double kWh = toKWh(pulses);
 				if (!Double.isNaN(oldKWh)) {
 					double nKWh = kWh - oldKWh;
@@ -120,7 +122,7 @@ public class PowerMeter extends SerialPortNews {
 
 			double kWh = toKWh(pulses);
 			oldKWh = 0;
-			String status = "Last day's power consumption for the house were " + kWh + "kWh. Using "+power+"w right now. #tweetawatt";
+			String status = "Last day's power consumption for the house were " + kWh + "kWh. Using " + power + "w right now. #tweetawatt";
 			logger.debug(status);
 			try {
 				post2Twitter(status);
@@ -136,7 +138,7 @@ public class PowerMeter extends SerialPortNews {
 				os.write('\n');
 			}
 		} catch (Exception e) {
-			logger.error("Faild to tweet",e);
+			logger.error("Faild to tweet", e);
 			return;
 		}
 		nextTweet = getNextTweetTime();
