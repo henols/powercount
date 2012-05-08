@@ -119,10 +119,10 @@ public class PowerMeter extends SerialPortNews {
 			String counter = result[0];
 			String pulses = result[1];
 			String power = result[2];
-
 			double kWh = toKWh(pulses);
 			oldKWh = 0;
 			String status = "Last day's power consumption for the house were " + kWh + "kWh. Using " + power + "w right now. #tweetawatt";
+
 			logger.debug(status);
 			try {
 				post2Twitter(status);
@@ -131,8 +131,8 @@ public class PowerMeter extends SerialPortNews {
 			}
 			if (CLEAR_COUNT) {
 				os.write(CONFIRM_METER_1);
-				for(int i = 0; i < power.length(); i++) {
-					byte charAt = (byte)power.charAt(i);
+				for(int i = 0; i < pulses.length(); i++) {
+					byte charAt = (byte)pulses.charAt(i);
 					os.write(charAt);
 				}
 				os.write('\n');

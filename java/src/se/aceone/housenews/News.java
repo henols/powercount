@@ -9,7 +9,7 @@ import twitter4j.Twitter;
 import twitter4j.TwitterException;
 
 public abstract class News {
-	private static final String API_KEY = "3b8b6b6204d4a6b34868ebb36fe14886";
+	private static final String API_KEY = "afdd5eecb848d9bb758bd3f6dc91a1a9";
 	private Twitter twitter;
 
 	public abstract void init() throws Exception;
