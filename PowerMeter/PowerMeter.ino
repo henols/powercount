@@ -5,11 +5,12 @@
 const byte CONFIRM = 'c';
 const byte NAME = '3';
 const byte PULSES_TEXT = '4';
+const byte DUMP = 'd';
 
 const int BAUD_RATE = 19200;
 const byte LED_PIN_1 = 13; // LED connected to digital pin 13
-const byte LED_PIN_2 = 14; // LED connected to digital pin 13
-const byte BT_RESET_PIN = 15; // BlueToothe module reset
+const byte LED_PIN_2 = 9; // LED connected to digital pin 14
+const byte BT_RESET_PIN = 10; // BlueToothe module reset
 
 const byte LED_PINS[2] = { LED_PIN_1, LED_PIN_2 };
 
@@ -18,7 +19,7 @@ const byte PULSE_PIN_2 = 3; //
 
 long pulseCount[2] = { 0, 0 }; //Number of pulses, used to measure energy.
 unsigned long pulseTime[2], lastTime[2]; //Used to measure power.
-double power[2]; //power and energy
+int power[2]; //power and energy
 int ppwh[2] = { 1, 1 }; ////1000 pulses/kwh = 1 pulse per wh - Number of pulses per wh - found or set on the meter.
 
 long lastSerial;
@@ -42,20 +43,24 @@ void setup() {
 
 	changeLedState(COUNTER_1);
 	changeLedState(COUNTER_2);
-
+	
 }
 
 void loop() {
-	if (Serial.available() > 0) {
+	if (Serial.available() >= 2) {
 		lastSerial = millis();
 		// get incoming byte:
 		byte inByte = Serial.read();
+		int counter = Serial.read() - '0';
 		switch (inByte) {
 		case PULSES_TEXT:
-			getCountText(Serial.read());
+			getCountText(counter);
 			break;
 		case CONFIRM:
-			confirmCount(Serial.read());
+			confirmCount(counter);
+			break;
+		case DUMP:
+			dump(counter);
 			break;
 		case NAME:
 			getName();
@@ -118,15 +123,35 @@ void getName() {
 	Serial.println("Main power");
 }
 
+void dump(int dummy) {
+	Serial.println("Dump.");
+	getName();
+	getCountText(COUNTER_1);
+	getCountText(COUNTER_2);
+	getLedState(COUNTER_1);
+	getLedState(COUNTER_2);
+}
+
+void getLedState(int counter) {
+	Serial.print("LED ");
+	Serial.print(counter, DEC);
+	Serial.print(" at pin ");
+	Serial.print(LED_PINS[counter], DEC);
+	Serial.print(" has state ");
+	Serial.println(ledState[counter]);
+
+}
+
 void getCountText(byte ind) {
-	Serial.print("pulses:");
-	Serial.println(pulseCount[ind], DEC);
+	Serial.print(ind, DEC);
+	Serial.print(",pulses:");
+	Serial.print(pulseCount[ind], DEC);
 	Serial.print(",power:");
 	Serial.println(power[ind], DEC);
 }
 
 void changeLedState(byte counter) {
-	ledState[counter] != ledState[counter];
+	ledState[counter] = !ledState[counter];
 	digitalWrite(LED_PINS[counter], ledState[counter]);
 }
 
