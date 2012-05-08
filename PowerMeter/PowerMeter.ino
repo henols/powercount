@@ -84,7 +84,14 @@ void onPulse(int counter) {
 
 	pulseCount[counter]++; //pulseCounter               
 
-	power[counter] = int((3600000000.0 / (pulseTime[counter] - lastTime[counter])) / ppwh[counter]); //Calculate power
+	long timeDiff;
+	if(pulseTime[counter] < lastTime[counter])) { // If there has been an overflow in micros()
+		timeDiff = 4294967295 - lastTime[counter] + pulseTime[counter];
+	} else {
+		timeDiff = (pulseTime[counter] - lastTime[counter]);
+	}
+
+	power[counter] = int(3600000000.0 / timeDiff / ppwh[counter]); //Calculate power
 }
 
 void confirmCount(byte ind) {
