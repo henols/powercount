@@ -249,7 +249,7 @@ public class Rego600 {
 	public static void main(String[] args) throws IOException, DataException {
 		// try {
 		// System.out.println(new Alarm((byte) 2, new Date(), null));
-		// Rego600 rego600 = new Rego600("COM9");
+		// Rego600 rego600 = new Rego600("COM8");
 		// try {
 		// double temp = rego600.getRegisterValueTemperature(HEAT_CURVE);
 		// System.out.println("Heat curve 0x0000=" + temp);

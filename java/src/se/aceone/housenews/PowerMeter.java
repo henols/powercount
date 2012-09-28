@@ -22,6 +22,7 @@ public class PowerMeter extends SerialPortNews {
 	private static final long PING_TIME = 10000;
 
 	private static Logger logger = Logger.getLogger(PowerMeter.class);
+	private int oldWh = Integer.MIN_VALUE;
 	private double oldKWh = Double.NaN;
 
 	private long pingTime;
@@ -81,9 +82,13 @@ public class PowerMeter extends SerialPortNews {
 					return;
 				}
 				double kWh = toKWh(pulses);
+				int Wh = Integer.parseInt(pulses);
 				if (!Double.isNaN(oldKWh)) {
 					double nKWh = kWh - oldKWh;
 					String values = "kWh:" + nKWh + ",power:" + power;
+//				if (oldWh!= Integer.MIN_VALUE) {
+//					int nWh = Wh - oldWh;
+//					String values = "Wh:" + nWh + ",power:" + power;
 					try {
 						int resp = post2Emon(values);
 						logger.debug(resp + " " + values);
@@ -93,6 +98,7 @@ public class PowerMeter extends SerialPortNews {
 						logger.error("IOException", e);
 					}
 				}
+				oldWh = Wh;
 				oldKWh = kWh;
 				// logger.debug("ping : " + sb.toString().trim());
 				pingTime += PING_TIME;
@@ -120,6 +126,7 @@ public class PowerMeter extends SerialPortNews {
 			String pulses = result[1];
 			String power = result[2];
 			double kWh = toKWh(pulses);
+			oldWh = 0;
 			oldKWh = 0;
 			String status = "Last day's power consumption for the house were " + kWh + "kWh. Using " + power + "w right now. #tweetawatt";
 
