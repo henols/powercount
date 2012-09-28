@@ -16,10 +16,11 @@ import java.util.StringTokenizer;
 import org.apache.log4j.Logger;
 
 import se.aceone.housenews.BlueToothNews;
+import se.aceone.housenews.SerialPortNews;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 
-public class HeatPump extends BlueToothNews {
+public class HeatPump extends SerialPortNews {
 
 	public static final int[] TEMPS = new int[] { //
 	Rego600.RADIATOR_RETURN_GT1, // Radiator return[GT1]
@@ -210,20 +211,52 @@ public class HeatPump extends BlueToothNews {
 	}
 
 	public static void main(String[] args) throws Exception {
-		// for (int reg : TEMPS) {
-		// System.out.println(toCamelCase(Rego600.translateRegister(reg)));
+
+		String comPort = "COM8";
+		HeatPump heatPump = new HeatPump(comPort);
+		heatPump.init();
+		System.out.print(toCamelCase(Rego600.translateRegister(Rego600.OUTDOOR_TEMP_GT2)));
+		try {
+			System.out.println(" " + heatPump.rego600.getRegisterValueTemperature(Rego600.OUTDOOR_TEMP_GT2));
+		} catch (DataException e) {
+			System.out.println(" " + e.getMessage());
+		}
+
+		for (int reg : TEMPS) {
+			System.out.print(toCamelCase(Rego600.translateRegister(reg)));
+			try {
+				System.out.println(" " + heatPump.rego600.getRegisterValueTemperature(reg));
+			} catch (DataException e) {
+				System.out.println(" " + e.getMessage());
+			}
+		}
+		System.out.println();
+		for (int reg : SENSORS) {
+			System.out.print(toCamelCase(Rego600.translateRegister(reg)));
+			try {
+				System.out.println(" " + heatPump.rego600.getRegisterValue(reg));
+			} catch (DataException e) {
+				System.out.println(" " + e.getMessage());
+			}
+		}
+
+		// try {
+		// double temp = heatPump.rego600.getRegisterValueTemperature(Rego600.HEAT_CURVE);
+		// System.out.println("Heat curve 0x0000=" + temp);
+		// } catch (DataException e) {
+		// System.out.println(e.getMessage());
 		// }
-		// System.out.println();
-		// for (int reg : SENSORS) {
-		// System.out.println(toCamelCase(Rego600.translateRegister(reg)));
+		// try {
+		// double temp = heatPump.rego600.getRegisterValueTemperature(Rego600.RADIATOR_RETURN_GT1);
+		// System.out.println("Radiator return 0x020B=" + temp);
+		// } catch (DataException e) {
+		// System.out.println(e.getMessage());
 		// }
 
-		String bluetoothAddress = "00195dee2307";
-		HeatPump heatPump = new HeatPump(bluetoothAddress);
-		heatPump.init();
-		while (true) {
-			heatPump.post2Twitter(null);
-			Thread.sleep(10000);
-		}
+		// while (true) {
+		// heatPump.post2Twitter(null);
+		// Thread.sleep(10000);
+		// }
+		System.exit(0);
 	}
 }

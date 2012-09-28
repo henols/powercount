@@ -55,18 +55,15 @@ public abstract class SerialPortNews extends News {
 	@Override
 	public void init() throws Exception {
 		listPorts();
-		CommPortIdentifier portIdentifier = CommPortIdentifier
-				.getPortIdentifier(portName);
+		CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
 		if (portIdentifier.isCurrentlyOwned()) {
 			logger.error("Error: Port is currently in use");
 		} else {
-			CommPort commPort = portIdentifier.open(this.getClass().getName(),
-					2000);
+			CommPort commPort = portIdentifier.open(this.getClass().getName(), 2000);
 
 			if (commPort instanceof SerialPort) {
 				SerialPort serialPort = (SerialPort) commPort;
-				serialPort.setSerialPortParams(baudRate, SerialPort.DATABITS_8,
-						SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+				serialPort.setSerialPortParams(baudRate, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 
 				is = serialPort.getInputStream();
 				os = serialPort.getOutputStream();
