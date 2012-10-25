@@ -157,8 +157,8 @@ public class HeatPump extends SerialPortNews {
 		}
 
 		double average = getAverage();
-		String status = "Last day's temperatures, average:" + average + "C max:" + max + "C at "
-				+ hhMM.format(new Date(maxStamp)) + "  min:" + min + "C at " + hhMM.format(new Date(minStamp))
+		String status = "Last day's temperatures, average:" + average + "°C max:" + max + "°C at "
+				+ hhMM.format(new Date(maxStamp)) + "  min:" + min + "°C at " + hhMM.format(new Date(minStamp))
 				+ ". #temperature";
 		logger.debug(status + " l:" + status.length());
 		try {
