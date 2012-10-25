@@ -16,21 +16,32 @@ import java.util.Date;
 
 public class Rego600 {
 
-	static final byte REGO_600 = (byte)0x81;
+	static final byte REGO_600 = (byte) 0x81;
 
-	private static final byte PANEL_R = (byte)0x00;// 1 - address 5char 16bit number Read from front panel (keyboard+leds) {reg09FF+xx}
-	private static final byte PANEL_W = (byte)0x01;// 2 - address + data 1char confirm Write to front panel (keyboard+leds) {reg 09FF+xx}
-	private static final byte REGISTER_R = (byte)0x02;// 1 - address 5char 16bit number Read from system register (heat curve, temperatures, devices) {reg 1345+xx}
-	private static final byte REGISTER_W = (byte)0x03;// 2 - address + data 1char confirm Write into system register (heat curve, temperatures, devices) {reg 1345+xx}
-	private static final byte TIMER_R = (byte)0x04;// 1 - address 5char 16bit number Read from timer registers {reg 1B45+xx}
-	private static final byte TIMER_W = (byte)0x05;// 2 - address + data 1char confirm Write into timer registers {reg 1B45+xx}
-	private static final byte REGISTER_HI_R = (byte)0x06;// 1 - address 5char 16bit number Read from register 1B61 {reg 1B61+xx}
-	private static final byte REGISTER_HI_W = (byte)0x07;// 2 - address + data 1char confirm Write into register 1B61 {1B61+xx}
-	private static final byte DISPLAY_R = (byte)0x20;// 1 - display line 42char text line Read from display {0AC7+15h*xx}
-	private static final byte ERROR_LAST = (byte)0x40;// 0 42char text line Read last error line [4100/00]
-	private static final byte ERROR_PREVIUS = (byte)0x42;// 0 42char text line Read previous error line (prev from last reading) [4100/01]
-	public static final byte VERSION = (byte)0x7F;// 0 5char 16bit number Read rego version {constant 0258 = 600 ?Rego 600?}
-	
+	// 1 - address 5char 16bit number Read from front panel (keyboard+leds) {reg09FF+xx}
+	private static final byte PANEL_R = (byte) 0x00;
+	// 2 - address + data 1char confirm Write to front panel (keyboard+leds) {reg 09FF+xx}
+	private static final byte PANEL_W = (byte) 0x01;
+	// 1 - address 5char 16bit number Read from system register (heat curve, temperatures, devices) {reg 1345+xx}
+	private static final byte REGISTER_R = (byte) 0x02;
+	// 2 - address + data 1char confirm Write into system register (heat curve, temperatures, devices) {reg 1345+xx}
+	private static final byte REGISTER_W = (byte) 0x03;
+	// 1 - address 5char 16bit number Read from timer registers {reg 1B45+xx}
+	private static final byte TIMER_R = (byte) 0x04;
+	// 2 - address + data 1char confirm Write into timer registers {reg 1B45+xx}
+	private static final byte TIMER_W = (byte) 0x05;
+	// 1 - address 5char 16bit number Read from register 1B61 {reg 1B61+xx}
+	private static final byte REGISTER_HI_R = (byte) 0x06;
+	// 2 - address + data 1char confirm Write into register 1B61 {1B61+xx}
+	private static final byte REGISTER_HI_W = (byte) 0x07;
+	// 1 - display line 42char text line Read from display {0AC7+15h*xx}
+	private static final byte DISPLAY_R = (byte) 0x20;
+	// 0 42char text line Read last error line [4100/00]
+	private static final byte ERROR_LAST = (byte) 0x40;
+	// 0 42char text line Read previous error line (prev from last reading) [4100/01]
+	private static final byte ERROR_PREVIUS = (byte) 0x42;
+	// 0 5char 16bit number Read rego version {constant 0258 = 600 ?Rego 600?}
+	public static final byte VERSION = (byte) 0x7F;
 
 	// Rego636-... Register
 	// Sensor values
@@ -177,16 +188,16 @@ public class Rego600 {
 		byte[] request = { address, command, 00, 00, 00, 00, 00, 00, 00 };
 		byte sum = 0;
 
-		for(int poc = 0; poc <= 2; poc++) {
-			byte b = (byte)(register & 0x7F);
+		for (int poc = 0; poc <= 2; poc++) {
+			byte b = (byte) (register & 0x7F);
 			request[4 - poc] = b;
-			sum = (byte)(sum ^ b);
+			sum = (byte) (sum ^ b);
 			register = register >> 7;
 		}
-		for(int poc = 0; poc <= 2; poc++) {
-			byte b = (byte)(value & 0x7F);
+		for (int poc = 0; poc <= 2; poc++) {
+			byte b = (byte) (value & 0x7F);
 			request[7 - poc] = b;
-			sum = (byte)(sum ^ b);
+			sum = (byte) (sum ^ b);
 			value = value >> 7;
 		}
 		request[8] = sum;
@@ -205,9 +216,9 @@ public class Rego600 {
 	// # convert 42 bytes array to text
 	private String result2text(byte[] result) {
 		StringBuffer text = new StringBuffer();
-		for(int i = 1; i <= 20; i++) {
+		for (int i = 1; i <= 20; i++) {
 			int c = (result[(i * 2)] << 4) + result[1 + (i * 2)];
-			text.append((char)c);
+			text.append((char) c);
 		}
 		return text.toString();
 	}
@@ -230,7 +241,7 @@ public class Rego600 {
 			throw new DataException("Bad header " + result[0] + " length: " + result.length);
 		}
 		int checksum = 0;
-		for(int j = 1; j < result.length - 1; j++) {
+		for (int j = 1; j < result.length - 1; j++) {
 			checksum ^= result[j];
 		}
 
@@ -279,101 +290,101 @@ public class Rego600 {
 	}
 
 	public static String translateRegister(int register) {
-		switch(register) {
-			case RADIATOR_RETURN_GT1:
-				return "Radiator return [GT1]";
-			case OUTDOOR_TEMP_GT2:
-				return "Outdoor [GT2]";
-			case HOT_WATER_GT3:
-				return "Hot water [GT3]";
-			case FORWARD_GT4:
-				return "Forward [GT4]";
-			case ROOM_GT5:
-				return "Room [GT5]";
-			case COMPRESSOR_GT6:
-				return "Compressor [GT6]";
-			case HEAT_FLUID_OUT_GT8:
-				return "Heat fluid out [GT8]";
-			case HEAT_FLUID_IN_GT9:
-				return "Heat fluid in [GT9]";
-			case TRANSFER_FLUID_IN_GT10:
-				return "Cold fluid in[GT10]";
-			case TRANSFER_FLUID_OUT_GT11:
-				return "Cold fluid out[GT11]";
-			case HOT_WATER_EXTERNAL_GT3X:
-				return "External hotwater [GT3x]";
+		switch (register) {
+		case RADIATOR_RETURN_GT1:
+			return "Radiator return [GT1]";
+		case OUTDOOR_TEMP_GT2:
+			return "Outdoor [GT2]";
+		case HOT_WATER_GT3:
+			return "Hot water [GT3]";
+		case FORWARD_GT4:
+			return "Forward [GT4]";
+		case ROOM_GT5:
+			return "Room [GT5]";
+		case COMPRESSOR_GT6:
+			return "Compressor [GT6]";
+		case HEAT_FLUID_OUT_GT8:
+			return "Heat fluid out [GT8]";
+		case HEAT_FLUID_IN_GT9:
+			return "Heat fluid in [GT9]";
+		case TRANSFER_FLUID_IN_GT10:
+			return "Cold fluid in[GT10]";
+		case TRANSFER_FLUID_OUT_GT11:
+			return "Cold fluid out[GT11]";
+		case HOT_WATER_EXTERNAL_GT3X:
+			return "External hotwater [GT3x]";
 
-				// Device values
-			case GROUND_LOOP_PUMP_P3:
-				return "Ground loop pump [P3]";
-			case COMPRESSOR:
-				return "Compresor";
-			case ADDITIONAL_HEAT_STEP_1:
-				return "Additional heat 3kW";
-			case ADDITIONAL_HEAT_STEP_2:
-				return "Additional heat 6kW";
-			case RADIATOR_PUMP_P1:
-				return "Radiator pump [P1]";
-			case HEAT_CARRIER_PUMP_P2:
-				return "Heat carrier pump [P2]";
-			case THREE_WAY_VALVE:
-				return "Tree-way valve [VXV]";
-			case ALARM:
-				return "Alarm";
+			// Device values
+		case GROUND_LOOP_PUMP_P3:
+			return "Ground loop pump [P3]";
+		case COMPRESSOR:
+			return "Compresor";
+		case ADDITIONAL_HEAT_STEP_1:
+			return "Additional heat 3kW";
+		case ADDITIONAL_HEAT_STEP_2:
+			return "Additional heat 6kW";
+		case RADIATOR_PUMP_P1:
+			return "Radiator pump [P1]";
+		case HEAT_CARRIER_PUMP_P2:
+			return "Heat carrier pump [P2]";
+		case THREE_WAY_VALVE:
+			return "Tree-way valve [VXV]";
+		case ALARM:
+			return "Alarm";
 
-				// Control data
-			case ADDED_HEAT_POWER:
-				return "Add heat power in %";
-			case GT4_TARGET_VALUE:
-				return "GT4 Target value";
-			case GT1_TARGET_VALUE:
-				return "GT1 Target value";
-			case GT1_ON_VALUE:
-				return "GT1 On value";
-			case GT1_OFF_VALUE:
-				return "GT1 Off value";
-			case GT3_TARGET_VALUE:
-				return "GT3 Target value";
-			case GT3_ON_VALUE:
-				return "GT3 On value";
-			case GT3_OFF_VALUE:
-				return "GT3 Off value";
+			// Control data
+		case ADDED_HEAT_POWER:
+			return "Add heat power in %";
+		case GT4_TARGET_VALUE:
+			return "GT4 Target value";
+		case GT1_TARGET_VALUE:
+			return "GT1 Target value";
+		case GT1_ON_VALUE:
+			return "GT1 On value";
+		case GT1_OFF_VALUE:
+			return "GT1 Off value";
+		case GT3_TARGET_VALUE:
+			return "GT3 Target value";
+		case GT3_ON_VALUE:
+			return "GT3 On value";
+		case GT3_OFF_VALUE:
+			return "GT3 Off value";
 
-				// Settings
-			case HEAT_CURVE:
-				return "Heat curve";
-			case HEAT_CURVE_FINE:
-				return "Heat curve fine adj.";
-			case HEAT_CURVE_COUPLING_DIFF:
-				return "Heat curve coupling diff.";
-			case ADJ_CURVE_AT_N35_DGR_OUT:
-				return "Adj. curve at -35° out";
-			case ADJ_CURVE_AT_N30_DGR_OUT:
-				return "Adj. curve at -30° out";
-			case ADJ_CURVE_AT_N25_DGR_OUT:
-				return "Adj. curve at -25° out";
-			case ADJ_CURVE_AT_N20_DGR_OUT:
-				return "Adj. curve at -20° out";
-			case ADJ_CURVE_AT_N15_DGR_OUT:
-				return "Adj. curve at -15° out";
-			case ADJ_CURVE_AT_N10_DGR_OUT:
-				return "Adj. curve at -10° out";
-			case ADJ_CURVE_AT_N5_DGR_OUT:
-				return "Adj. curve at -5° out";
-			case ADJ_CURVE_AT_0_DGR_OUT:
-				return "Adj. curve at 0° out";
-			case ADJ_CURVE_AT_5_DGR_OUT:
-				return "Adj. curve at 5° out";
-			case ADJ_CURVE_AT_10_DGR_OUT:
-				return "Adj. curve at 10° out";
-			case ADJ_CURVE_AT_15_DGR_OUT:
-				return "Adj. curve at 15° out";
-			case ADJ_CURVE_AT_20_DGR_OUT:
-				return "Adj. curve at 20° out";
-			case INDOOR_TEMP_SETTING:
-				return "Indoor temp setting";
-			case CURVE_INFL_IN_TEMP:
-				return "Curve infl. by in-temp.";
+			// Settings
+		case HEAT_CURVE:
+			return "Heat curve";
+		case HEAT_CURVE_FINE:
+			return "Heat curve fine adj.";
+		case HEAT_CURVE_COUPLING_DIFF:
+			return "Heat curve coupling diff.";
+		case ADJ_CURVE_AT_N35_DGR_OUT:
+			return "Adj. curve at -35° out";
+		case ADJ_CURVE_AT_N30_DGR_OUT:
+			return "Adj. curve at -30° out";
+		case ADJ_CURVE_AT_N25_DGR_OUT:
+			return "Adj. curve at -25° out";
+		case ADJ_CURVE_AT_N20_DGR_OUT:
+			return "Adj. curve at -20° out";
+		case ADJ_CURVE_AT_N15_DGR_OUT:
+			return "Adj. curve at -15° out";
+		case ADJ_CURVE_AT_N10_DGR_OUT:
+			return "Adj. curve at -10° out";
+		case ADJ_CURVE_AT_N5_DGR_OUT:
+			return "Adj. curve at -5° out";
+		case ADJ_CURVE_AT_0_DGR_OUT:
+			return "Adj. curve at 0° out";
+		case ADJ_CURVE_AT_5_DGR_OUT:
+			return "Adj. curve at 5° out";
+		case ADJ_CURVE_AT_10_DGR_OUT:
+			return "Adj. curve at 10° out";
+		case ADJ_CURVE_AT_15_DGR_OUT:
+			return "Adj. curve at 15° out";
+		case ADJ_CURVE_AT_20_DGR_OUT:
+			return "Adj. curve at 20° out";
+		case INDOOR_TEMP_SETTING:
+			return "Indoor temp setting";
+		case CURVE_INFL_IN_TEMP:
+			return "Curve infl. by in-temp.";
 		}
 		return null;
 	}

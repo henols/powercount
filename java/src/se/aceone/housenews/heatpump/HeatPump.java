@@ -139,8 +139,8 @@ public class HeatPump extends SerialPortNews {
 				values.add(outDoorTemp);
 
 				double average = getAverage();
-				logger.debug("average:" + average + " max:" + max + " at " + hhMM.format(new Date(maxStamp)) + " min:" + min + " at "
-						+ hhMM.format(new Date(minStamp)) + " now:" + outDoorTemp);
+				logger.debug("average:" + average + " max:" + max + " at " + hhMM.format(new Date(maxStamp)) + " min:"
+						+ min + " at " + hhMM.format(new Date(minStamp)) + " now:" + outDoorTemp);
 
 				try {
 					logger.debug(post.toString());
@@ -157,8 +157,9 @@ public class HeatPump extends SerialPortNews {
 		}
 
 		double average = getAverage();
-		String status = "Last day's temperatures, average:" + average + " max:" + max + " at " + hhMM.format(new Date(maxStamp)) + "  min:" + min + " at "
-				+ hhMM.format(new Date(minStamp)) + ". #temperature";
+		String status = "Last day's temperatures, average:" + average + "C max:" + max + "C at "
+				+ hhMM.format(new Date(maxStamp)) + "  min:" + min + "C at " + hhMM.format(new Date(minStamp))
+				+ ". #temperature";
 		logger.debug(status + " l:" + status.length());
 		try {
 			post2Twitter(status);
@@ -241,13 +242,15 @@ public class HeatPump extends SerialPortNews {
 		}
 
 		// try {
-		// double temp = heatPump.rego600.getRegisterValueTemperature(Rego600.HEAT_CURVE);
+		// double temp =
+		// heatPump.rego600.getRegisterValueTemperature(Rego600.HEAT_CURVE);
 		// System.out.println("Heat curve 0x0000=" + temp);
 		// } catch (DataException e) {
 		// System.out.println(e.getMessage());
 		// }
 		// try {
-		// double temp = heatPump.rego600.getRegisterValueTemperature(Rego600.RADIATOR_RETURN_GT1);
+		// double temp =
+		// heatPump.rego600.getRegisterValueTemperature(Rego600.RADIATOR_RETURN_GT1);
 		// System.out.println("Radiator return 0x020B=" + temp);
 		// } catch (DataException e) {
 		// System.out.println(e.getMessage());
