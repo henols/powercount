@@ -1,4 +1,10 @@
-#define RESET_TIME 60000
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+// Data wire is plugged into port 2 on the Arduino
+#define ONE_WIRE_BUS 10
+#define TEMPERATURE_PRECISION 9
+
 #define COUNTER_1 0
 #define COUNTER_2 1
 
@@ -6,11 +12,11 @@ const byte CONFIRM = 'c';
 const byte NAME = '3';
 const byte PULSES_TEXT = '4';
 const byte DUMP = 'd';
+const byte TEMPERATURE = 't';
 
 const int BAUD_RATE = 19200;
 const byte LED_PIN_1 = 13; // LED connected to digital pin 13
 const byte LED_PIN_2 = 9; // LED connected to digital pin 14
-const byte BT_RESET_PIN = 10; // BlueToothe module reset
 
 const byte LED_PINS[2] = { LED_PIN_1, LED_PIN_2 };
 
@@ -26,6 +32,14 @@ long lastSerial;
 
 boolean ledState[] = { false, false };
 
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
+
+// Pass our oneWire reference to Dallas Temperature. 
+DallasTemperature sensors(&oneWire);
+
+DeviceAddress tempDeviceAddress; // We'll use this variable to store a found device address
+
 void setup() {
 	pinMode(LED_PIN_1, OUTPUT); // sets the digital pin as output
 	pinMode(LED_PIN_2, OUTPUT); // sets the digital pin as output
@@ -34,16 +48,24 @@ void setup() {
 	changeLedState(COUNTER_2);
 
 	Serial.begin(BAUD_RATE);
-	pinMode(BT_RESET_PIN, OUTPUT); // sets the digital pin as output
-
-	resetBtModule();
 
 	attachInterrupt(0, onPulse1, FALLING); // KWH interrupt attached to IRQ 1  = pin2 
 	attachInterrupt(1, onPulse2, FALLING); // KWH interrupt attached to IRQ 1  = pin3
 
 	changeLedState(COUNTER_1);
 	changeLedState(COUNTER_2);
-	
+
+	// Start up the library
+	sensors.begin();
+
+	// Loop through each device, print out address
+	for (int i = 0; i < sensors.getDeviceCount(); i++) {
+		// Search the wire for address
+		if (sensors.getAddress(tempDeviceAddress, i)) {
+			// set the resolution to TEMPERATURE_PRECISION bit (Each Dallas/Maxim device is capable of several different resolutions)
+			sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+		}
+	}
 }
 
 void loop() {
@@ -65,12 +87,11 @@ void loop() {
 		case NAME:
 			getName();
 			break;
+		case TEMPERATURE:
+			getTemperatures();
+			break;
 		}
 	}
-	if ((lastSerial + RESET_TIME) < millis()) {
-		resetBtModule();
-	}
-
 }
 
 void onPulse1() {
@@ -90,7 +111,7 @@ void onPulse(int counter) {
 	pulseCount[counter]++; //pulseCounter               
 
 	long timeDiff;
-	if(pulseTime[counter] < lastTime[counter])) { // If there has been an overflow in micros()
+	if (pulseTime[counter] < lastTime[counter]) { // If there has been an overflow in micros()
 		timeDiff = 4294967295 - lastTime[counter] + pulseTime[counter];
 	} else {
 		timeDiff = (pulseTime[counter] - lastTime[counter]);
@@ -130,6 +151,20 @@ void dump(int dummy) {
 	getCountText(COUNTER_2);
 	getLedState(COUNTER_1);
 	getLedState(COUNTER_2);
+	
+	  Serial.print("Found ");
+	  Serial.print(sensors.getDeviceCount(), DEC);
+	  Serial.println(" temperature devices.");
+
+	sensors.requestTemperatures(); // Send the command to get temperatures
+	// Loop through each device, print out temperature data
+	for (int i = 0; i < sensors.getDeviceCount(); i++) {
+		// Search the wire for address
+		if (sensors.getAddress(tempDeviceAddress, i)) {
+			printTemperature(tempDeviceAddress); 
+			Serial.println();
+		}
+	}
 }
 
 void getLedState(int counter) {
@@ -139,7 +174,6 @@ void getLedState(int counter) {
 	Serial.print(LED_PINS[counter], DEC);
 	Serial.print(" has state ");
 	Serial.println(ledState[counter]);
-
 }
 
 void getCountText(byte ind) {
@@ -155,10 +189,36 @@ void changeLedState(byte counter) {
 	digitalWrite(LED_PINS[counter], ledState[counter]);
 }
 
-void resetBtModule() {
-	digitalWrite(BT_RESET_PIN, LOW);
-	delay(10);
-	digitalWrite(BT_RESET_PIN, HIGH);
-	lastSerial = millis();
+void getTemperatures(void) {
+	// call sensors.requestTemperatures() to issue a global temperature 
+	// request to all devices on the bus
+	sensors.requestTemperatures(); // Send the command to get temperatures
+	// Loop through each device, print out temperature data
+	for (int i = 0; i < sensors.getDeviceCount(); i++) {
+		// Search the wire for address
+		if (sensors.getAddress(tempDeviceAddress, i)) {
+			printTemperature(tempDeviceAddress);
+			if(i < sensors.getDeviceCount() -1){
+				Serial.print(",");
+			}
+		}
+	}
+	Serial.println();
+}
+
+void printTemperature(DeviceAddress deviceAddress) {
+	float tempC = sensors.getTempC(deviceAddress);
+	printAddress(deviceAddress);
+	Serial.print(":");
+	Serial.print(tempC);
+}
+
+void printAddress(DeviceAddress deviceAddress) {
+	for (uint8_t i = 0; i < 8; i++) {
+		if (deviceAddress[i] < 16) {
+			Serial.print("0");
+		}
+		Serial.print(deviceAddress[i], HEX);
+	}
 }
 
