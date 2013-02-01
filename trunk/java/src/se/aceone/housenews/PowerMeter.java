@@ -4,30 +4,47 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import java.util.StringTokenizer;
 import org.apache.log4j.Logger;
 import twitter4j.TwitterException;
 
 public class PowerMeter extends SerialPortNews {
 
+	private static final String TEMP_SENSOR = "1053C65B02080047:";
 	private static final byte[] READ_METER_1 = { '4', '0' };
 	private static final byte[] READ_METER_2 = { '4', '1' };
 	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
 	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
+	private static final byte[] TEMPERATURE = { 't', 't' };
 
 	private static final boolean DAYS = true;
 	private static final boolean CLEAR_COUNT = true;
+
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
-	private static final long PING_TIME = 10000;
+	private static final SimpleDateFormat hhMM = new SimpleDateFormat("HH:mm");
+
+	private static final long POWER_PING_TIME = 10000;
+	private static final long TEMPERATURE_PING_TIME = 300000;
 
 	private static Logger logger = Logger.getLogger(PowerMeter.class);
 	private int oldWh = Integer.MIN_VALUE;
 	private double oldKWh = Double.NaN;
 
-	private long pingTime;
+	private long powerPingTime;
+	private long temperaturePingTime;
 
-	private Calendar nextTweet;
+	private Calendar nextPowerTweet;
+	private Calendar nextTemperatureTweet;
+
+	private double max = -10000;
+	private long maxStamp;
+	private double min = 10000;
+	private long minStamp;
+	private List<Double> values = new ArrayList<Double>();
 
 	public PowerMeter(String port) {
 		super(port);
@@ -36,8 +53,10 @@ public class PowerMeter extends SerialPortNews {
 	@Override
 	public void init() throws Exception {
 		super.init();
-		nextTweet = getNextTweetTime();
-		pingTime = System.currentTimeMillis() + PING_TIME;
+		nextPowerTweet = getNextPowerTweetTime();
+		nextTemperatureTweet = getNextTemperatureTweetTime();
+		powerPingTime = System.currentTimeMillis() + POWER_PING_TIME;
+		temperaturePingTime = System.currentTimeMillis() + TEMPERATURE_PING_TIME;
 	}
 
 	@Override
@@ -45,86 +64,114 @@ public class PowerMeter extends SerialPortNews {
 		Calendar now = Calendar.getInstance();
 		// logger.debug(sdf.format(now.getTime()) + " before " +
 		// sdf.format(nextTweet.getTime()));
-		if (now.before(nextTweet)) {
-			if (System.currentTimeMillis() > pingTime) {
-				StringBuilder sb = new StringBuilder();
-				try {
-					os.write(READ_METER_1);
-					os.flush();
-					char c;
-					while ((c = (char)is.read()) != '\n') {
-						sb.append(c);
-						if (sb.length() > 35) {
-							String message = "To mutch to read... '" + sb + "' (ping)";
-							logger.error(message);
-							// tweetError(twitter, message);
-							break;
-						}
-					}
-				} catch (SocketException e) {
-					logger.error("SocketException", e);
-					reconnect();
-					return;
-				} catch (IOException e) {
-					logger.error("IOException", e);
-					reconnect();
-					return;
-				}
+		
+		// readPowerMeter(now); // TODO uncoment before deploy
+		readTemperature(now);
+	}
 
-				logger.debug(sb.toString().trim());
-				String[] result = splitResult(sb.toString());
-				String counter = result[0];
-				String pulses = result[1];
-				String power = result[2];
-				// logger.debug("pulses:"+pulses+" power:"+power);
-				if (Long.parseLong(pulses) < 0 || Long.parseLong(power) < 0) {
-					logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
+	private void readTemperature(Calendar now) {
+		logTemperature();
+		if (!now.before(nextTemperatureTweet)) {
+			tweetTemperature();
+		}
+	}
+
+	private void tweetTemperature() {
+		double average = getAverage();
+		String status = "Last day's temperatures, average:" + average + "°C max:" + max + "°C at " + hhMM.format(new Date(maxStamp)) + "  min:" + min + "°C at "
+				+ hhMM.format(new Date(minStamp)) + ". #temperature";
+		logger.debug(status + " l:" + status.length());
+		try {
+			post2Twitter(status);
+		} catch (TwitterException e) {
+			logger.error("Failed to post Twitter maessage.", e);
+		}
+		max = -10000;
+		min = 10000;
+		values.clear();
+		nextTemperatureTweet = getNextTemperatureTweetTime();
+	}
+
+	private void logTemperature() {
+		if (System.currentTimeMillis() > temperaturePingTime) {
+			String result;
+			try {
+				result = readProtocol(TEMPERATURE);
+				if (result == null) {
 					return;
 				}
-				double kWh = toKWh(pulses);
-				int Wh = Integer.parseInt(pulses);
-				if (!Double.isNaN(oldKWh)) {
-					double nKWh = kWh - oldKWh;
-					String values = "kWh:" + nKWh + ",power:" + power;
-//				if (oldWh!= Integer.MIN_VALUE) {
-//					int nWh = Wh - oldWh;
-//					String values = "Wh:" + nWh + ",power:" + power;
-					try {
-						int resp = post2Emon(values);
-						logger.debug(resp + " " + values);
-					} catch (MalformedURLException e) {
-						logger.error("MalformedURLException", e);
-					} catch (IOException e) {
-						logger.error("IOException", e);
-					}
-				}
-				oldWh = Wh;
-				oldKWh = kWh;
-				// logger.debug("ping : " + sb.toString().trim());
-				pingTime += PING_TIME;
+			} catch (SocketException e) {
+				logger.error("SocketException", e);
+				reconnect();
+				return;
+			} catch (IOException e) {
+				logger.error("IOException", e);
+				reconnect();
+				return;
 			}
-			return;
+			try {
+				int resp = post2Emon(result);
+				// logger.debug(resp + " " + result);
+			} catch (MalformedURLException e) {
+				logger.error("MalformedURLException", e);
+			} catch (IOException e) {
+				logger.error("IOException", e);
+			}
+			temperaturePingTime += TEMPERATURE_PING_TIME;
+			int ind1 = result.indexOf(TEMP_SENSOR) + TEMP_SENSOR.length();
+			if (ind1 >= 0) {
+				int ind2 = result.indexOf(',', ind1);
+				if (ind2 >= 0) {
+					double outDoorTemp = Double.parseDouble(result.substring(ind1, ind2));
+					
+					if (outDoorTemp > max) {
+						max = outDoorTemp;
+						maxStamp = System.currentTimeMillis();
+					}
+					if (outDoorTemp < min) {
+						min = outDoorTemp;
+						minStamp = System.currentTimeMillis();
+					}
+
+					values.add(outDoorTemp);
+
+					double average = getAverage();
+					logger.debug("average:" + average + "°C max:" + max + "°C at " + hhMM.format(new Date(maxStamp)) + " min:" + min + "°C at "
+							+ hhMM.format(new Date(minStamp)) + " now:" + outDoorTemp+"°C");
+				}
+			}
 		}
+	}
+	
+	private double getAverage() {
+		double total = 0;
+		for (double value : values) {
+			total += value;
+		}
+		double average = total / values.size();
+		int ix = (int) (average * 100.0); // scale it
+		return ((double) ix) / 100.0;
+	}
+
+
+	private void readPowerMeter(Calendar now) {
+		logPower();
+		if (!now.before(nextPowerTweet)) {
+			tweetPower();
+		}
+	}
+
+	private void tweetPower() {
 		logger.debug("Read power counter.");
 		try {
-			StringBuilder sb = new StringBuilder();
-			os.write(READ_METER_1);
-			os.flush();
-			char c;
-			while ((c = (char)is.read()) != '\n') {
-				sb.append(c);
-				if (sb.length() > 35) {
-					String message = "To mutch to read... '" + sb + "'";
-					logger.error(message);
-					return;
-				}
+			String result = readProtocol(READ_METER_1);
+			if (result == null) {
+				return;
 			}
-
-			logger.debug(sb.toString());
-			String[] result = splitResult(sb.toString());
-			String counter = result[0];
-			String pulses = result[1];
-			String power = result[2];
+			String[] r = splitPowerResult(result.toString());
+			String counter = r[0];
+			String pulses = r[1];
+			String power = r[2];
 			double kWh = toKWh(pulses);
 			oldWh = 0;
 			oldKWh = 0;
@@ -138,8 +185,8 @@ public class PowerMeter extends SerialPortNews {
 			}
 			if (CLEAR_COUNT) {
 				os.write(CONFIRM_METER_1);
-				for(int i = 0; i < pulses.length(); i++) {
-					byte charAt = (byte)pulses.charAt(i);
+				for (int i = 0; i < pulses.length(); i++) {
+					byte charAt = (byte) pulses.charAt(i);
 					os.write(charAt);
 				}
 				os.write('\n');
@@ -148,10 +195,62 @@ public class PowerMeter extends SerialPortNews {
 			logger.error("Faild to tweet", e);
 			return;
 		}
-		nextTweet = getNextTweetTime();
+		nextPowerTweet = getNextPowerTweetTime();
 	}
 
-	private String[] splitResult(String result) {
+	private void logPower() {
+		if (System.currentTimeMillis() > powerPingTime) {
+			String result;
+			try {
+				result = readProtocol(READ_METER_1);
+				if (result == null) {
+					return;
+				}
+			} catch (SocketException e) {
+				logger.error("SocketException", e);
+				reconnect();
+				return;
+			} catch (IOException e) {
+				logger.error("IOException", e);
+				reconnect();
+				return;
+			}
+
+			String[] r = splitPowerResult(result);
+			String counter = r[0];
+			String pulses = r[1];
+			String power = r[2];
+			// logger.debug("pulses:"+pulses+" power:"+power);
+			if (Long.parseLong(pulses) < 0 || Long.parseLong(power) < 0) {
+				logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
+				return;
+			}
+			double kWh = toKWh(pulses);
+			int Wh = Integer.parseInt(pulses);
+			if (!Double.isNaN(oldKWh)) {
+				double nKWh = kWh - oldKWh;
+				String values = "kWh:" + nKWh + ",power:" + power;
+				// if (oldWh!= Integer.MIN_VALUE) {
+				// int nWh = Wh - oldWh;
+				// String values = "Wh:" + nWh + ",power:" + power;
+				try {
+					int resp = post2Emon(values);
+					// logger.debug(resp + " " + values);
+				} catch (MalformedURLException e) {
+					logger.error("MalformedURLException", e);
+				} catch (IOException e) {
+					logger.error("IOException", e);
+				}
+			}
+			oldWh = Wh;
+			oldKWh = kWh;
+			// logger.debug("ping : " + sb.toString().trim());
+			powerPingTime += POWER_PING_TIME;
+		}
+		return;
+	}
+
+	private String[] splitPowerResult(String result) {
 		String[] r = new String[3];
 		StringTokenizer st = new StringTokenizer(result, ",");
 		r[0] = st.nextToken();
@@ -182,9 +281,7 @@ public class PowerMeter extends SerialPortNews {
 			int l = power.length();
 			power = power.substring(0, l - 3) + "." + power.substring(l - 3);
 		}
-
 		return Double.parseDouble(power);
-
 	}
 
 	private void reconnect() {
@@ -196,12 +293,24 @@ public class PowerMeter extends SerialPortNews {
 		}
 	}
 
-	private Calendar getNextTweetTime() {
+	private Calendar getNextPowerTweetTime() {
+		Calendar nextTime = getNextTweetTime(0);
+		logger.debug("Creating new next power tweet time: " + sdf.format(nextTime.getTime()));
+		return nextTime;
+	}
+
+	private Calendar getNextTemperatureTweetTime() {
+		Calendar nextTime = getNextTweetTime(8);
+		logger.debug("Creating new next temperature tweet time: " + sdf.format(nextTime.getTime()));
+		return nextTime;
+	}
+
+	private Calendar getNextTweetTime(int houres) {
 		Calendar nextTime = Calendar.getInstance();
 
 		// Zero out the hour, minute, second, and millisecond
 		if (DAYS) {
-			nextTime.set(Calendar.HOUR_OF_DAY, 0);
+			nextTime.set(Calendar.HOUR_OF_DAY, houres);
 			nextTime.set(Calendar.MINUTE, 0);
 		}
 		nextTime.set(Calendar.SECOND, 0);
@@ -212,8 +321,26 @@ public class PowerMeter extends SerialPortNews {
 		} else {
 			nextTime.add(Calendar.MINUTE, 1);
 		}
-		logger.debug("Creating new next time: " + sdf.format(nextTime.getTime()));
 		return nextTime;
+	}
+
+	private String readProtocol(byte[] protocol) throws IOException {
+		StringBuilder sb = new StringBuilder();
+		os.write(protocol);
+		os.flush();
+		char c;
+		while ((c = (char) is.read()) != '\n') {
+			sb.append(c);
+			if (sb.length() > 135) {
+				String message = "To mutch to read... '" + sb + "'";
+				logger.error(message);
+				return null;
+			}
+		}
+
+		String result = sb.toString().trim();
+		logger.debug(result);
+		return result;
 	}
 
 	public static void main(String[] args) throws Exception {
