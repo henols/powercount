@@ -21,7 +21,7 @@ public abstract class News {
 	public abstract void tick();
 
 	public void post2Twitter(String status) throws TwitterException {
-		status = "@aceone_ " + status + " #smarthome";
+		status = status + " #smarthome";
 		twitter.updateStatus(status);
 		logger.debug("Tweeting: " + status);
 	}
