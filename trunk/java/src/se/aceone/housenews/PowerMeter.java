@@ -75,7 +75,7 @@ public class PowerMeter extends SerialPortNews {
 		// logger.debug(sdf.format(now.getTime()) + " before " +
 		// sdf.format(nextTweet.getTime()));
 
-		// readPowerMeter(now); // TODO uncoment before deploy
+		readPowerMeter(now);
 		readTemperature(now);
 	}
 
