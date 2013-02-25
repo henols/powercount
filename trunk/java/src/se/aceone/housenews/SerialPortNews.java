@@ -6,6 +6,7 @@ import gnu.io.SerialPort;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Enumeration;
 
 import org.apache.log4j.Logger;
 
@@ -28,10 +29,11 @@ public abstract class SerialPortNews extends News {
 	}
 
 	static void listPorts() {
-		java.util.Enumeration<CommPortIdentifier> portEnum = CommPortIdentifier.getPortIdentifiers();
+		@SuppressWarnings("unchecked")
+		Enumeration<CommPortIdentifier> portEnum = CommPortIdentifier.getPortIdentifiers();
 		while (portEnum.hasMoreElements()) {
 			CommPortIdentifier portIdentifier = portEnum.nextElement();
-			System.out.println(portIdentifier.getName() + " - " + getPortTypeName(portIdentifier.getPortType()));
+			logger.info(portIdentifier.getName() + " - " + getPortTypeName(portIdentifier.getPortType()));
 		}
 	}
 
@@ -73,15 +75,4 @@ public abstract class SerialPortNews extends News {
 			}
 		}
 	}
-
-	// public void close(){
-	// try {
-	// is.close();
-	// } catch (IOException e) {
-	// }
-	// try {
-	// os.close();
-	// } catch (IOException e) {
-	// }
-	// }
 }

@@ -107,7 +107,7 @@ public class PowerMeter extends SerialPortNews {
 		String status = "The temperature are " + temp+ "°C at " + hhMM.format(now.getTime()) + ". #temperature";
 		logger.debug(status + " l:" + status.length());
 		try {
-			post2Twitter(status);
+			Util.post2Twitter(status);
 		} catch (TwitterException e) {
 			logger.error("Failed to post Twitter message.", e);
 		}
@@ -119,7 +119,7 @@ public class PowerMeter extends SerialPortNews {
 				+ hhMM.format(new Date(minStamp)) + ". #temperature";
 		logger.debug(status + " l:" + status.length());
 		try {
-			post2Twitter(status);
+			Util.post2Twitter(status);
 		} catch (TwitterException e) {
 			logger.error("Failed to post Twitter message.", e);
 		}
@@ -147,7 +147,7 @@ public class PowerMeter extends SerialPortNews {
 			return;
 		}
 		try {
-			int resp = post2Emon(result);
+			int resp = Util.post2Emon(result);
 			// logger.debug(resp + " " + result);
 		} catch (MalformedURLException e) {
 			logger.error("MalformedURLException", e);
@@ -223,7 +223,7 @@ public class PowerMeter extends SerialPortNews {
 
 			logger.debug(status);
 			try {
-				post2Twitter(status);
+				Util.post2Twitter(status);
 			} catch (TwitterException e) {
 				logger.error("Failed to post Twitter maessage.", e);
 			}
@@ -276,7 +276,7 @@ public class PowerMeter extends SerialPortNews {
 			// int nWh = Wh - oldWh;
 			// String values = "Wh:" + nWh + ",power:" + power;
 			try {
-				int resp = post2Emon(values);
+				int resp = Util.post2Emon(values);
 				// logger.debug(resp + " " + values);
 			} catch (MalformedURLException e) {
 				logger.error("MalformedURLException", e);

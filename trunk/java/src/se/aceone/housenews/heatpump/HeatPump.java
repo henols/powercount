@@ -17,6 +17,7 @@ import org.apache.log4j.Logger;
 
 import se.aceone.housenews.BlueToothNews;
 import se.aceone.housenews.SerialPortNews;
+import se.aceone.housenews.Util;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 
@@ -144,7 +145,7 @@ public class HeatPump extends SerialPortNews {
 
 				try {
 					logger.debug(post.toString());
-					post2Emon(post.toString());
+					Util.post2Emon(post.toString());
 				} catch (MalformedURLException e) {
 					logger.error(e);
 				} catch (IOException e) {
@@ -162,7 +163,7 @@ public class HeatPump extends SerialPortNews {
 				+ ". #temperature";
 		logger.debug(status + " l:" + status.length());
 		try {
-			post2Twitter(status);
+			Util.post2Twitter(status);
 		} catch (TwitterException e) {
 			logger.error("Failed to post Twitter maessage.", e);
 		}

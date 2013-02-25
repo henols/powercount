@@ -74,9 +74,9 @@ public class NewsFeed {
 			logger.debug("Adding heat pump.");
 			news.add(new HeatPump(heatPumpBluetoothAddress));
 		}
+		Util.setTwitter(twitter);
 		for (News newsItem : news) {
 			try {
-				newsItem.setTwitter(twitter);
 				newsItem.init();
 			} catch (Exception e) {
 				logger.error("Cant init newsItem '" + newsItem.getClass().getSimpleName() + "'", e);
