@@ -37,18 +37,22 @@ public class Util {
 
 	public static void post2Twitter(String status) throws TwitterException {
 		if (twitter == null) {
-			twitter = new TwitterFactory().getInstance();
-			twitter.setOAuthConsumer(CONSUMER_KEY, CONSUMER_SECRET);
-
-			try {
-				Util.handleAccessToken(twitter);
-			} catch (ClassNotFoundException | IOException | URISyntaxException e) {
-				new TwitterException(e);
-			}
+			initTwitter();
 		}
 		status = status + " #smarthome";
 		twitter.updateStatus(status);
 		logger.debug("Tweeting: " + status);
+	}
+
+	public static void initTwitter() throws TwitterException {
+		twitter = new TwitterFactory().getInstance();
+		twitter.setOAuthConsumer(CONSUMER_KEY, CONSUMER_SECRET);
+
+		try {
+			Util.handleAccessToken(twitter);
+		} catch (ClassNotFoundException | IOException | URISyntaxException e) {
+			new TwitterException(e);
+		}
 	}
 
 	public static void setEmonUri(String emonUri) {
