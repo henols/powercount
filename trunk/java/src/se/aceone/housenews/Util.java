@@ -32,6 +32,7 @@ public class Util {
 	private static Logger logger = Logger.getLogger(Util.class);
 
 	private static Twitter twitter;
+	private static String emonUri;
 	private static String emonApiKey;
 
 	public static void post2Twitter(String status) throws TwitterException {
@@ -50,12 +51,16 @@ public class Util {
 		logger.debug("Tweeting: " + status);
 	}
 
+	public static void setEmonUri(String emonUri) {
+		Util.emonUri = emonUri;
+	}
+
 	public static void setEmonApiKey(String emonApiKey) {
 		Util.emonApiKey = emonApiKey;
 	}
 
 	public static int post2Emon(String msg) throws MalformedURLException, IOException {
-		String url = "http://192.168.1.223/emon/api/post?json={" + msg + "}&apikey=" + emonApiKey;
+		String url = emonUri + "/api/post?json={" + msg + "}&apikey=" + emonApiKey;
 		HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
 		int respCode = connection.getResponseCode();
 		connection.disconnect();

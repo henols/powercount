@@ -44,6 +44,8 @@ public class NewsFeed {
 		}
 
 		Util.setEmonApiKey(Util.EMON_API_KEY);
+		Util.setEmonUri("http://192.168.1.223/emon");
+
 		for (News newsItem : news) {
 			try {
 				newsItem.init();
