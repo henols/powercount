@@ -12,12 +12,14 @@ import java.util.StringTokenizer;
 import org.apache.log4j.Logger;
 import twitter4j.TwitterException;
 
-public class PowerMeter extends SerialPortNews {
+public class PowerMeter extends News {
 
 	private static final String TEMP_SENSOR = "1053C65B02080047:";
 	private static final byte[] READ_METER_1 = { '4', '0' };
-	private static final byte[] READ_METER_2 = { '4', '1' };
 	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
+	@SuppressWarnings("unused")
+	private static final byte[] READ_METER_2 = { '4', '1' };
+	@SuppressWarnings("unused")
 	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
 	private static final byte[] TEMPERATURE = { 't', 't' };
 
@@ -31,7 +33,7 @@ public class PowerMeter extends SerialPortNews {
 	private static final long TEMPERATURE_PING_TIME = 300000;
 
 	private static Logger logger = Logger.getLogger(PowerMeter.class);
-	private int oldWh = Integer.MIN_VALUE;
+//	private int oldWh = Integer.MIN_VALUE;
 	private double oldKWh = Double.NaN;
 
 	private long powerPingTime;
@@ -50,14 +52,14 @@ public class PowerMeter extends SerialPortNews {
 	private Calendar tempAt_06_00_c;
 	private Calendar tempAt_12_00_c;
 	private Calendar tempAt_18_00_c;
+	private Connection connection;
 
-	public PowerMeter(String port) {
-		super(port);
+	public PowerMeter(Connection connection) {
+		this.connection = connection;
 	}
 
 	@Override
 	public void init() throws Exception {
-		super.init();
 		nextPowerTweet = getNextPowerTweetTime();
 		nextTemperatureTweet = getNextTemperatureTweetTime();
 		tempAt_00_00_c = getNextTime(0);
@@ -147,8 +149,7 @@ public class PowerMeter extends SerialPortNews {
 			return;
 		}
 		try {
-			int resp = Util.post2Emon(result);
-			// logger.debug(resp + " " + result);
+			 Util.post2Emon(result);
 		} catch (MalformedURLException e) {
 			logger.error("MalformedURLException", e);
 		} catch (IOException e) {
@@ -213,11 +214,12 @@ public class PowerMeter extends SerialPortNews {
 				return;
 			}
 			String[] r = splitPowerResult(result.toString());
+			@SuppressWarnings("unused")
 			String counter = r[0];
 			String pulses = r[1];
 			String power = r[2];
 			double kWh = toKWh(pulses);
-			oldWh = 0;
+//			oldWh = 0;
 			oldKWh = 0;
 			String status = "Last day's power consumption for the house were " + kWh + "kWh. Using " + power + "w right now. #tweetawatt";
 
@@ -228,12 +230,12 @@ public class PowerMeter extends SerialPortNews {
 				logger.error("Failed to post Twitter maessage.", e);
 			}
 			if (CLEAR_COUNT) {
-				os.write(CONFIRM_METER_1);
+				connection.getOutputStream().write(CONFIRM_METER_1);
 				for (int i = 0; i < pulses.length(); i++) {
 					byte charAt = (byte) pulses.charAt(i);
-					os.write(charAt);
+					connection.getOutputStream().write(charAt);
 				}
-				os.write('\n');
+				connection.getOutputStream().write('\n');
 			}
 		} catch (Exception e) {
 			logger.error("Faild to tweet", e);
@@ -259,6 +261,7 @@ public class PowerMeter extends SerialPortNews {
 		}
 
 		String[] r = splitPowerResult(result);
+		@SuppressWarnings("unused")
 		String counter = r[0];
 		String pulses = r[1];
 		String power = r[2];
@@ -268,7 +271,7 @@ public class PowerMeter extends SerialPortNews {
 			return;
 		}
 		double kWh = toKWh(pulses);
-		int Wh = Integer.parseInt(pulses);
+//		int Wh = Integer.parseInt(pulses);
 		if (!Double.isNaN(oldKWh)) {
 			double nKWh = kWh - oldKWh;
 			String values = "kWh:" + nKWh + ",power:" + power;
@@ -276,15 +279,14 @@ public class PowerMeter extends SerialPortNews {
 			// int nWh = Wh - oldWh;
 			// String values = "Wh:" + nWh + ",power:" + power;
 			try {
-				int resp = Util.post2Emon(values);
-				// logger.debug(resp + " " + values);
+				 Util.post2Emon(values);
 			} catch (MalformedURLException e) {
 				logger.error("MalformedURLException", e);
 			} catch (IOException e) {
 				logger.error("IOException", e);
 			}
 		}
-		oldWh = Wh;
+//		oldWh = Wh;
 		oldKWh = kWh;
 		// logger.debug("ping : " + sb.toString().trim());
 		return;
@@ -368,10 +370,10 @@ public class PowerMeter extends SerialPortNews {
 
 	private String readProtocol(byte[] protocol) throws IOException {
 		StringBuilder sb = new StringBuilder();
-		os.write(protocol);
-		os.flush();
+		connection.getOutputStream().write(protocol);
+		connection.getOutputStream().flush();
 		char c;
-		while ((c = (char) is.read()) != '\n') {
+		while ((c = (char) connection.getInputStream().read()) != '\n') {
 			sb.append(c);
 			if (sb.length() > 135) {
 				String message = "To mutch to read... '" + sb + "'";
@@ -386,7 +388,7 @@ public class PowerMeter extends SerialPortNews {
 	}
 
 	public static void main(String[] args) throws Exception {
-		PowerMeter powerMeter = new PowerMeter("COM3");
+		PowerMeter powerMeter = new PowerMeter(new SerialPortConnectin("COM3"));
 		powerMeter.init();
 	}
 

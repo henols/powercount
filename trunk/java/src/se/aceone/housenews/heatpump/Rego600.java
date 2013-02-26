@@ -14,32 +14,34 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import se.aceone.housenews.Connection;
+
 public class Rego600 {
 
 	static final byte REGO_600 = (byte) 0x81;
 
 	// 1 - address 5char 16bit number Read from front panel (keyboard+leds) {reg09FF+xx}
-	private static final byte PANEL_R = (byte) 0x00;
+	public static final byte PANEL_R = (byte) 0x00;
 	// 2 - address + data 1char confirm Write to front panel (keyboard+leds) {reg 09FF+xx}
-	private static final byte PANEL_W = (byte) 0x01;
+	public static final byte PANEL_W = (byte) 0x01;
 	// 1 - address 5char 16bit number Read from system register (heat curve, temperatures, devices) {reg 1345+xx}
-	private static final byte REGISTER_R = (byte) 0x02;
+	public static final byte REGISTER_R = (byte) 0x02;
 	// 2 - address + data 1char confirm Write into system register (heat curve, temperatures, devices) {reg 1345+xx}
-	private static final byte REGISTER_W = (byte) 0x03;
+	public static final byte REGISTER_W = (byte) 0x03;
 	// 1 - address 5char 16bit number Read from timer registers {reg 1B45+xx}
-	private static final byte TIMER_R = (byte) 0x04;
+	public static final byte TIMER_R = (byte) 0x04;
 	// 2 - address + data 1char confirm Write into timer registers {reg 1B45+xx}
-	private static final byte TIMER_W = (byte) 0x05;
+	public static final byte TIMER_W = (byte) 0x05;
 	// 1 - address 5char 16bit number Read from register 1B61 {reg 1B61+xx}
-	private static final byte REGISTER_HI_R = (byte) 0x06;
+	public static final byte REGISTER_HI_R = (byte) 0x06;
 	// 2 - address + data 1char confirm Write into register 1B61 {1B61+xx}
-	private static final byte REGISTER_HI_W = (byte) 0x07;
+	public static final byte REGISTER_HI_W = (byte) 0x07;
 	// 1 - display line 42char text line Read from display {0AC7+15h*xx}
-	private static final byte DISPLAY_R = (byte) 0x20;
+	public static final byte DISPLAY_R = (byte) 0x20;
 	// 0 42char text line Read last error line [4100/00]
-	private static final byte ERROR_LAST = (byte) 0x40;
+	public static final byte ERROR_LAST = (byte) 0x40;
 	// 0 42char text line Read previous error line (prev from last reading) [4100/01]
-	private static final byte ERROR_PREVIUS = (byte) 0x42;
+	public static final byte ERROR_PREVIUS = (byte) 0x42;
 	// 0 5char 16bit number Read rego version {constant 0258 = 600 ?Rego 600?}
 	public static final byte VERSION = (byte) 0x7F;
 
@@ -106,6 +108,11 @@ public class Rego600 {
 	public Rego600(OutputStream os, InputStream is) {
 		outputStream = os;
 		inputStream = is;
+	}
+
+	public Rego600(Connection connection) {
+		outputStream = connection.getOutputStream();
+		inputStream = connection.getInputStream();
 	}
 
 	public String getDisplayLine(int line) throws IOException, DataException {
@@ -240,6 +247,7 @@ public class Rego600 {
 		if (result[0] != 01) {
 			throw new DataException("Bad header " + result[0] + " length: " + result.length);
 		}
+		@SuppressWarnings("unused")
 		int checksum = 0;
 		for (int j = 1; j < result.length - 1; j++) {
 			checksum ^= result[j];

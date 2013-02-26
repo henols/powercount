@@ -1,11 +1,7 @@
 package se.aceone.housenews.heatpump;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.URL;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -15,13 +11,13 @@ import java.util.StringTokenizer;
 
 import org.apache.log4j.Logger;
 
-import se.aceone.housenews.BlueToothNews;
-import se.aceone.housenews.SerialPortNews;
+import se.aceone.housenews.Connection;
+import se.aceone.housenews.News;
+import se.aceone.housenews.SerialPortConnectin;
 import se.aceone.housenews.Util;
-import twitter4j.Twitter;
 import twitter4j.TwitterException;
 
-public class HeatPump extends SerialPortNews {
+public class HeatPump extends News {
 
 	public static final int[] TEMPS = new int[] { //
 	Rego600.RADIATOR_RETURN_GT1, // Radiator return[GT1]
@@ -48,13 +44,11 @@ public class HeatPump extends SerialPortNews {
 	};
 
 	private static final boolean DAYS = true;
-	private static final boolean CLEAR_COUNT = DAYS;
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
 	private static final SimpleDateFormat hhMM = new SimpleDateFormat("HH:mm");
 	private static final long PING_TIME = 60000;
 
 	private static Logger logger = Logger.getLogger(HeatPump.class);
-	private String total;
 
 	private long pingTime;
 
@@ -67,17 +61,17 @@ public class HeatPump extends SerialPortNews {
 	private long minStamp;
 
 	private List<Double> values = new ArrayList<Double>();
+	private Connection connection;
 
-	public HeatPump(String bluetoothAddress) {
-		super(bluetoothAddress);
+	public HeatPump(Connection connection) {
+		this.connection = connection;
 	}
 
 	@Override
 	public void init() throws Exception {
-		super.init();
 		nextTweet = getNextTweetTime();
 		pingTime = System.currentTimeMillis() + PING_TIME;
-		rego600 = new Rego600(os, is);
+		rego600 = new Rego600(connection);
 	}
 
 	static String toCamelCase(String s) {
@@ -215,7 +209,7 @@ public class HeatPump extends SerialPortNews {
 	public static void main(String[] args) throws Exception {
 
 		String comPort = "COM8";
-		HeatPump heatPump = new HeatPump(comPort);
+		HeatPump heatPump = new HeatPump(new SerialPortConnectin(comPort));
 		heatPump.init();
 		System.out.print(toCamelCase(Rego600.translateRegister(Rego600.OUTDOOR_TEMP_GT2)));
 		try {
