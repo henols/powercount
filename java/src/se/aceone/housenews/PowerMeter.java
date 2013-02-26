@@ -52,6 +52,7 @@ public class PowerMeter extends News {
 	private Calendar tempAt_06_00_c;
 	private Calendar tempAt_12_00_c;
 	private Calendar tempAt_18_00_c;
+
 	private Connection connection;
 
 	public PowerMeter(Connection connection) {

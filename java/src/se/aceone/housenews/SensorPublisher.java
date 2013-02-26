@@ -15,7 +15,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
@@ -84,6 +86,7 @@ public class SensorPublisher extends News {
 		logger.info("Connecting to MQTT server : " + serverURI);
 
 		client = new MqttClient(serverURI, "SensorPublisher");
+		client.setCallback(new Callback());
 		client.connect();
 	}
 
@@ -231,7 +234,7 @@ public class SensorPublisher extends News {
 			MqttMessage message = new MqttMessage();
 			message.setQos(2);
 
-			MqttTopic topic = client.getTopic(KWH_TOPIC);
+			MqttTopic topic = client.getTopic(KWH_TOPIC+"/dailyconsumption");
 			message.setPayload(String.valueOf(kWh).getBytes());
 			try {
 				topic.publish(message);
@@ -393,7 +396,26 @@ public class SensorPublisher extends News {
 
 	private static void printUsage(Options options) {
 		HelpFormatter formatter = new HelpFormatter();
-		formatter.printHelp("SensorPublisher", options);
+		formatter.printHelp("SensorPublisher", options, true);
 		System.exit(1);
 	}
+	
+	class Callback implements MqttCallback {
+
+		@Override
+		public void messageArrived(MqttTopic topic, MqttMessage message) throws Exception {
+		}
+
+		@Override
+		public void deliveryComplete(MqttDeliveryToken token) {
+
+		}
+
+		@Override
+		public void connectionLost(Throwable cause) {
+			logger.error("Connection lost", cause);
+			System.exit(0);
+		}
+	}
+
 }
