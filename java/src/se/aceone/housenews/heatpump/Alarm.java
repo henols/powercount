@@ -1,21 +1,20 @@
 package se.aceone.housenews.heatpump;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Alarm {
-	private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+//	private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
-	private static final SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+//	private static final SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
 	private final byte type;
 	private final Date time;
 
-	private final byte[] data;
+//	private final byte[] data;
 
 	public Alarm(byte type, Date time, byte[] data) {
 		this.type = type;
 		this.time = time;
-		this.data = data;
+//		this.data = data;
 	}
 
 	public Date getTime() {

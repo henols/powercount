@@ -16,13 +16,6 @@
 
 package se.aceone.housenews;
 
-import twitter4j.Status;
-import twitter4j.Twitter;
-import twitter4j.TwitterException;
-import twitter4j.TwitterFactory;
-import twitter4j.auth.AccessToken;
-import twitter4j.auth.RequestToken;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,7 +27,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Map;
+
+import twitter4j.Status;
+import twitter4j.Twitter;
+import twitter4j.TwitterException;
+import twitter4j.TwitterFactory;
+import twitter4j.auth.AccessToken;
+import twitter4j.auth.RequestToken;
 
 /**
  * Example application that uses OAuth method to acquire access to your account.<br>
@@ -93,6 +92,7 @@ public final class UpdateStatus {
 		if (settingsDir.isDirectory() && accessTokenFile.isFile()) {
 			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(accessTokenFile));
 			accessToken = (AccessToken) ois.readObject();
+			ois.close();
 		} else {
 			BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 			System.out.println("Open the following URL and grant access to your account:");
@@ -125,6 +125,7 @@ public final class UpdateStatus {
 			}
 			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(accessTokenFile));
 			oos.writeObject(accessToken);
+			oos.close();
 		}
 		System.out.println("Got access token.");
 		System.out.println("Access token: " + accessToken.getToken());

@@ -10,22 +10,21 @@ import java.util.Enumeration;
 
 import org.apache.log4j.Logger;
 
-public abstract class SerialPortNews extends News {
-	public final static int BAUD_RATE = 19200;
-	private static Logger logger = Logger.getLogger(SerialPortNews.class);
+public class SerialPortConnectin implements Connection {
+	private static Logger logger = Logger.getLogger(SerialPortConnectin.class);
 	private final String portName;
 	protected InputStream is = null;
 	protected OutputStream os = null;
 	private final int baudRate;
 
-	public SerialPortNews(String port) {
+	public SerialPortConnectin(String port) throws Exception {
 		this(port, BAUD_RATE);
 	}
 
-	public SerialPortNews(String port, int baudRate) {
+	public SerialPortConnectin(String port, int baudRate) throws Exception {
 		this.portName = port;
 		this.baudRate = baudRate;
-
+		init();
 	}
 
 	static void listPorts() {
@@ -54,8 +53,7 @@ public abstract class SerialPortNews extends News {
 		}
 	}
 
-	@Override
-	public void init() throws Exception {
+	private void init() throws Exception {
 		listPorts();
 		CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
 		if (portIdentifier.isCurrentlyOwned()) {
@@ -74,5 +72,21 @@ public abstract class SerialPortNews extends News {
 				logger.error("Not an serial port");
 			}
 		}
+	}
+	
+	/* (non-Javadoc)
+	 * @see se.aceone.housenews.Connection#getInputStream()
+	 */
+	@Override
+	public InputStream getInputStream(){
+		return is;
+	}
+	
+	/* (non-Javadoc)
+	 * @see se.aceone.housenews.Connection#getOutputStream()
+	 */
+	@Override
+	public OutputStream getOutputStream() {
+		return os;
 	}
 }

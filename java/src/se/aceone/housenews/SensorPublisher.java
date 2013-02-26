@@ -1,11 +1,19 @@
 package se.aceone.housenews;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.SocketException;
 import java.util.Calendar;
 import java.util.StringTokenizer;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.OptionGroup;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -13,13 +21,18 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 import org.eclipse.paho.client.mqttv3.MqttTopic;
 
-import twitter4j.TwitterException;
+public class SensorPublisher extends News {
 
-public class SensorPublisher extends SerialPortNews {
+	private static final String BLUETOOTH = "bluetooth";
+	private static final String COMPORT = "comport";
+	private static final String PORT = "port";
+	private static final String ADDRESS = "address";
 
 	private static final byte[] READ_METER_1 = { '4', '0' };
+	@SuppressWarnings("unused")
 	private static final byte[] READ_METER_2 = { '4', '1' };
 	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
+	@SuppressWarnings("unused")
 	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
 	private static final byte[] TEMPERATURE = { 't', 't' };
 
@@ -33,9 +46,8 @@ public class SensorPublisher extends SerialPortNews {
 	final static String KWH_TOPIC = "mulbetet49/powermeter/kwh";
 	final static String TEMPERATURE_TOPIC = "mulbetet49/temperature/";
 
-	
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
-	private int oldWh = Integer.MIN_VALUE;
+	// private int oldWh = Integer.MIN_VALUE;
 	private double oldKWh = Double.NaN;
 
 	private long powerPingTime;
@@ -43,20 +55,36 @@ public class SensorPublisher extends SerialPortNews {
 
 	private Calendar nextDailyConsumtion;
 	private MqttClient client;
+	private Connection connection;
+	private String address;
+	private String port = "1883";
 
-	public SensorPublisher(String port) {
-		super(port);
+	public SensorPublisher(CommandLine cmd) throws Exception {
+		address = cmd.getOptionValue(ADDRESS);
+		if (cmd.hasOption(BLUETOOTH)) {
+			String bluetooth = cmd.getOptionValue(BLUETOOTH);
+			logger.info("Using Bluetooth connection: " + bluetooth);
+			connection = new BlueToothConnection(bluetooth);
+		} else if (cmd.hasOption(COMPORT)) {
+			String comport = cmd.getOptionValue(COMPORT);
+			logger.info("Using Serial connection: " + comport);
+			connection = new SerialPortConnectin(comport);
+		}
+		if (cmd.hasOption(PORT)) {
+			port = cmd.getOptionValue(PORT);
+		}
 	}
 
 	@Override
 	public void init() throws Exception {
-		super.init();
 		nextDailyConsumtion = getDailyConsumtionTime();
 		powerPingTime = System.currentTimeMillis() + POWER_PING_TIME;
 		temperaturePingTime = System.currentTimeMillis() + TEMPERATURE_PING_TIME;
+		String serverURI = "tcp://" + address + ":" + port;
+		logger.info("Connecting to MQTT server : " + serverURI);
 
-		client = new MqttClient("tcp://192.168.1.121:1889", "Publisher_" + MqttClient.generateClientId());
-
+		client = new MqttClient(serverURI, "SensorPublisher");
+		client.connect();
 	}
 
 	@Override
@@ -104,21 +132,21 @@ public class SensorPublisher extends SerialPortNews {
 
 		// Split result
 		// power:252.4,temperature:15.4
-		
+
 		MqttMessage message = new MqttMessage();
 		message.setQos(2);
-		
+
 		String[] strings = result.split(",");
 		for (String string : strings) {
 			int indexOf = string.indexOf(':');
-			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC+string.substring(0,indexOf));
-			message.setPayload(string.substring(indexOf+1).getBytes());
+			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC + string.substring(0, indexOf));
+			message.setPayload(string.substring(indexOf + 1).getBytes());
 			try {
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
-				logger.error("Failed to persist: "+message,e);
+				logger.error("Failed to persist: " + message, e);
 			} catch (MqttException e) {
-				logger.error("Failed to publish: "+message,e);
+				logger.error("Failed to publish: " + message, e);
 			}
 		}
 	}
@@ -141,6 +169,7 @@ public class SensorPublisher extends SerialPortNews {
 		}
 
 		String[] r = splitPowerResult(result);
+		@SuppressWarnings("unused")
 		String counter = r[0];
 		String pulses = r[1];
 		String power = r[2];
@@ -150,34 +179,34 @@ public class SensorPublisher extends SerialPortNews {
 			return;
 		}
 		double kWh = toKWh(pulses);
-		int Wh = Integer.parseInt(pulses);
-	
+		// int Wh = Integer.parseInt(pulses);
+
 		if (!Double.isNaN(oldKWh)) {
 			double nKWh = kWh - oldKWh;
 
 			MqttMessage message = new MqttMessage();
 			message.setQos(2);
-			
+
 			MqttTopic topic = client.getTopic(KWH_TOPIC);
 			message.setPayload(String.valueOf(nKWh).getBytes());
 			try {
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
-				logger.error("Failed to persist: "+message,e);
+				logger.error("Failed to persist: " + message, e);
 			} catch (MqttException e) {
-				logger.error("Failed to publish: "+message,e);
+				logger.error("Failed to publish: " + message, e);
 			}
 			topic = client.getTopic(POWER_TOPIC);
 			message.setPayload(power.getBytes());
 			try {
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
-				logger.error("Failed to persist: "+message,e);
+				logger.error("Failed to persist: " + message, e);
 			} catch (MqttException e) {
-				logger.error("Failed to publish: "+message,e);
+				logger.error("Failed to publish: " + message, e);
 			}
 		}
-		oldWh = Wh;
+		// oldWh = Wh;
 		oldKWh = kWh;
 		// logger.debug("ping : " + sb.toString().trim());
 		return;
@@ -191,31 +220,33 @@ public class SensorPublisher extends SerialPortNews {
 				return;
 			}
 			String[] r = splitPowerResult(result.toString());
+			@SuppressWarnings("unused")
 			String counter = r[0];
 			String pulses = r[1];
+			@SuppressWarnings("unused")
 			String power = r[2];
 			double kWh = toKWh(pulses);
-			oldWh = 0;
+			// oldWh = 0;
 			oldKWh = 0;
 			MqttMessage message = new MqttMessage();
 			message.setQos(2);
-			
+
 			MqttTopic topic = client.getTopic(KWH_TOPIC);
 			message.setPayload(String.valueOf(kWh).getBytes());
 			try {
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
-				logger.error("Failed to persist: "+message,e);
+				logger.error("Failed to persist: " + message, e);
 			} catch (MqttException e) {
-				logger.error("Failed to publish: "+message,e);
+				logger.error("Failed to publish: " + message, e);
 			}
 			if (CLEAR_COUNT) {
-				os.write(CONFIRM_METER_1);
+				connection.getOutputStream().write(CONFIRM_METER_1);
 				for (int i = 0; i < pulses.length(); i++) {
 					byte charAt = (byte) pulses.charAt(i);
-					os.write(charAt);
+					connection.getOutputStream().write(charAt);
 				}
-				os.write('\n');
+				connection.getOutputStream().write('\n');
 			}
 		} catch (Exception e) {
 			logger.error("Faild to tweet", e);
@@ -268,10 +299,10 @@ public class SensorPublisher extends SerialPortNews {
 
 	private String readProtocol(byte[] protocol) throws IOException {
 		StringBuilder sb = new StringBuilder();
-		os.write(protocol);
-		os.flush();
+		connection.getOutputStream().write(protocol);
+		connection.getOutputStream().flush();
 		char c;
-		while ((c = (char) is.read()) != '\n') {
+		while ((c = (char) connection.getInputStream().read()) != '\n') {
 			sb.append(c);
 			if (sb.length() > 135) {
 				String message = "To mutch to read... '" + sb + "'";
@@ -287,11 +318,6 @@ public class SensorPublisher extends SerialPortNews {
 
 	private Calendar getDailyConsumtionTime() {
 		Calendar nextTime = getNextTime(0);
-		return nextTime;
-	}
-
-	private Calendar getNextTemperatureTweetTime() {
-		Calendar nextTime = getNextTime(8);
 		return nextTime;
 	}
 
@@ -316,8 +342,57 @@ public class SensorPublisher extends SerialPortNews {
 		return nextTime;
 	}
 
+	public void process() {
+		while (true) {
+			tick();
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+			}
+		}
+	}
+
 	public static void main(String[] args) throws Exception {
-		SensorPublisher powerMeter = new SensorPublisher("COM3");
+		Options options = new Options();
+
+		options.addOption("p", PORT, true, "Mqtt server port, default 1883");
+		Option address = OptionBuilder.withLongOpt(ADDRESS).hasArg(true).withDescription("Mqtt server address")
+				.isRequired().create('a');
+
+		options.addOption(address);
+
+		OptionGroup optionGroup = new OptionGroup();
+		optionGroup.isRequired();
+		Option bluetooth = OptionBuilder.withLongOpt(BLUETOOTH).hasArg().withDescription("Buletooth address")
+				.create('b');
+		optionGroup.addOption(bluetooth);
+		Option comport = OptionBuilder.withLongOpt(COMPORT).hasArg().withDescription("Serial com port").create('c');
+		optionGroup.addOption(comport);
+
+		options.addOptionGroup(optionGroup);
+
+		if (args.length == 0) {
+			printUsage(options);
+		}
+
+		CommandLineParser parser = new PosixParser();
+
+		CommandLine cmd = null;
+		try {
+			cmd = parser.parse(options, args);
+		} catch (ParseException e) {
+			logger.error(e.getMessage());
+			printUsage(options);
+		}
+
+		SensorPublisher powerMeter = new SensorPublisher(cmd);
 		powerMeter.init();
+		powerMeter.process();
+	}
+
+	private static void printUsage(Options options) {
+		HelpFormatter formatter = new HelpFormatter();
+		formatter.printHelp("SensorPublisher", options);
+		System.exit(1);
 	}
 }

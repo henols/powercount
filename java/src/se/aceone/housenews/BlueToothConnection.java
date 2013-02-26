@@ -9,18 +9,18 @@ import javax.microedition.io.StreamConnection;
 
 import org.apache.log4j.Logger;
 
-public abstract class BlueToothNews extends News {
-	private static Logger logger = Logger.getLogger(BlueToothNews.class);
+public class BlueToothConnection implements Connection  {
+	private static Logger logger = Logger.getLogger(BlueToothConnection.class);
 	private final String bluetoothAddress;
 	protected InputStream is = null;
 	protected OutputStream os = null;
 
-	public BlueToothNews(String bluetoothAddress) {
+	public BlueToothConnection(String bluetoothAddress) throws Exception {
 		this.bluetoothAddress = bluetoothAddress;
+		init();
 	}
 	
-	@Override
-	public void init() throws Exception {
+	private void init() throws Exception {
 		UUID uuid = new UUID(bluetoothAddress, false);
 		String connectionURL = "btspp://" + uuid.toString() + ":1;master=false;encrypt=false;authenticate=false";
 		logger.info("Connecting to Blue Tooth device: " + uuid.toString());
@@ -28,5 +28,15 @@ public abstract class BlueToothNews extends News {
 		os = streamConnection.openOutputStream();
 		is = streamConnection.openInputStream();
 	}
-	
+
+	@Override
+	public InputStream getInputStream() {
+		return is;
+	}
+
+	@Override
+	public OutputStream getOutputStream() {
+		return os;
+	}
+
 }
