@@ -13,7 +13,7 @@ import org.apache.log4j.Logger;
 
 import se.aceone.housenews.Connection;
 import se.aceone.housenews.News;
-import se.aceone.housenews.SerialPortConnectin;
+import se.aceone.housenews.SerialPortConnection;
 import se.aceone.housenews.Util;
 import twitter4j.TwitterException;
 
@@ -209,7 +209,7 @@ public class HeatPump extends News {
 	public static void main(String[] args) throws Exception {
 
 		String comPort = "COM8";
-		HeatPump heatPump = new HeatPump(new SerialPortConnectin(comPort));
+		HeatPump heatPump = new HeatPump(new SerialPortConnection(comPort));
 		heatPump.init();
 		System.out.print(toCamelCase(Rego600.translateRegister(Rego600.OUTDOOR_TEMP_GT2)));
 		try {
