@@ -11,7 +11,6 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttClientPersistence;
 import org.eclipse.paho.client.mqttv3.MqttDefaultFilePersistence;
 import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -22,7 +21,6 @@ import twitter4j.TwitterException;
 
 public class DailyConsumtionTweet {
 
-
 	final static String POWER_TOPIC = "mulbetet49/powermeter/power";
 	final static String DAILY_CONSUMPTION_TOPIC = "mulbetet49/powermeter/kwh/dailyconsumption";
 
@@ -31,8 +29,8 @@ public class DailyConsumtionTweet {
 	private static final String PORT = "port";
 	private static final String ADDRESS = "address";
 
-
 	private static Logger logger = Logger.getLogger(DailyConsumtionTweet.class);
+	private MqttClient client;
 
 	public DailyConsumtionTweet(CommandLine cmd) throws MqttException, TwitterException {
 		String address = cmd.getOptionValue(ADDRESS);
@@ -41,11 +39,11 @@ public class DailyConsumtionTweet {
 			port = cmd.getOptionValue(PORT);
 		}
 		String serverURI = "tcp://" + address + ":" + port;
-		
-    	String tmpDir = System.getProperty("java.io.tmpdir");
-    	MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir+"/mqtt");
 
-		MqttClient client = new MqttClient(serverURI, "DailyConsumtionTweet", dataStore );
+		String tmpDir = System.getProperty("java.io.tmpdir");
+		MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir + "/mqtt");
+
+		client = new MqttClient(serverURI, "DailyConsumtionTweet", dataStore);
 		client.setCallback(new Callback());
 		client.connect();
 
@@ -95,8 +93,26 @@ public class DailyConsumtionTweet {
 		@Override
 		public void connectionLost(Throwable cause) {
 			logger.error("Connection lost", cause);
-			System.exit(0);
+			reconnectMqtt();
 		}
+	}
+
+	private void reconnectMqtt() {
+		while (!client.isConnected()) {
+			logger.info("Trying to reconnect to MQTT server");
+			try {
+				client.connect();
+			} catch (MqttException e) {
+			}
+			if (client.isConnected()) {
+				break;
+			}
+			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+			}
+		}
+		logger.info("Reconnected to MQTT server");
 	}
 
 	@SuppressWarnings("static-access")
@@ -122,7 +138,7 @@ public class DailyConsumtionTweet {
 			printUsage(options);
 		}
 
-		DailyConsumtionTweet dailyConsumtionTweet = new DailyConsumtionTweet(cmd);
+		new DailyConsumtionTweet(cmd);
 	}
 
 	private static void printUsage(Options options) {

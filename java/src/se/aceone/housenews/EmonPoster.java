@@ -32,6 +32,7 @@ public class EmonPoster {
 	
 	private String address;
 	private String port = "1883";
+	private MqttClient client;
 
 	private static Logger logger = Logger.getLogger(EmonPoster.class);
 
@@ -47,7 +48,7 @@ public class EmonPoster {
     	String tmpDir = System.getProperty("java.io.tmpdir");
     	MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir+"/mqtt");
 
-		MqttClient client = new MqttClient(serverURI, "EmonPoster", dataStore);
+		client = new MqttClient(serverURI, "EmonPoster", dataStore);
 		client.setCallback(new Callback());
 		client.connect();
 		
@@ -96,8 +97,25 @@ public class EmonPoster {
 		@Override
 		public void connectionLost(Throwable cause) {
 			logger.error("Connection lost", cause);
-			System.exit(0);
+			reconnectMqtt();
 		}
+	}
+	private void reconnectMqtt() {
+		while (!client.isConnected()) {
+			logger.info("Trying to reconnect to MQTT server");
+			try {
+				client.connect();
+			} catch (MqttException e) {
+			}
+			if (client.isConnected()) {
+				break;
+			}
+			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+			}
+		}
+		logger.info("Reconnected to MQTT server");
 	}
 
 	@SuppressWarnings("static-access")
@@ -133,7 +151,7 @@ public class EmonPoster {
 			printUsage(options);
 		}
 
-		EmonPoster emonPoster = new EmonPoster(cmd);
+		new EmonPoster(cmd);
 	}
 
 	private static void printUsage(Options options) {

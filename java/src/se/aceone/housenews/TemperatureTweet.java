@@ -29,17 +29,18 @@ public class TemperatureTweet {
 
 	private static final boolean DAYS = true;
 
-	
 	final static String TEMPERATURE_TOPIC = "mulbetet49/temperature/";
 
 	private static final String PORT = "port";
 	private static final String ADDRESS = "address";
 	private static final String SENSOR = "sensor";
-	
+
 	private static final SimpleDateFormat sdf = new SimpleDateFormat();
 	private static final SimpleDateFormat hhMM = new SimpleDateFormat("HH:mm");
 
 	private static Logger logger = Logger.getLogger(TemperatureTweet.class);
+
+	private static TemperatureTweet temperatureTwitter;
 
 	private double max = -10000;
 	private long maxStamp;
@@ -54,33 +55,34 @@ public class TemperatureTweet {
 	private Calendar tempAt_12_00_c;
 	private Calendar tempAt_18_00_c;
 
-	
+	private MqttClient client;
+
 	public TemperatureTweet(CommandLine cmd) throws MqttException, TwitterException {
 		String address = cmd.getOptionValue(ADDRESS);
 		String port = "1883";
 		if (cmd.hasOption(PORT)) {
 			port = cmd.getOptionValue(PORT);
 		}
-		String serverURI = "tcp://" + address + ":"+port;
+		String serverURI = "tcp://" + address + ":" + port;
 
 		String tmpDir = System.getProperty("java.io.tmpdir");
-    	MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir+"/mqtt");
+		MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir + "/mqtt");
 
-		MqttClient client = new MqttClient(serverURI, "TemperatureTweet", dataStore);
+		client = new MqttClient(serverURI, "TemperatureTweet", dataStore);
 		client.setCallback(new Callback());
 		client.connect();
-		
-		String sensor = cmd.getOptionValue(SENSOR);;
-		
-		client.subscribe(TEMPERATURE_TOPIC+sensor);
 
-		logger.info("MQTT Client ID: "+client.getClientId());
-		logger.info("MQTT Server URI: "+client.getServerURI());
+		String sensor = cmd.getOptionValue(SENSOR);
+
+		client.subscribe(TEMPERATURE_TOPIC + sensor);
+
+		logger.info("MQTT Client ID: " + client.getClientId());
+		logger.info("MQTT Server URI: " + client.getServerURI());
 		logger.info("MQTT Is connected: " + client.isConnected());
 		logger.info("Sensor name: " + sensor);
-		
+
 		Util.initTwitter();
-		
+
 		nextTemperatureTweet = getNextTemperatureTweetTime();
 		tempAt_00_00_c = getNextTime(0);
 		tempAt_06_00_c = getNextTime(6);
@@ -107,11 +109,11 @@ public class TemperatureTweet {
 		@Override
 		public void connectionLost(Throwable cause) {
 			logger.error("Connection lost", cause);
-			System.exit(0);
+			reconnectMqtt();
 		}
 	}
 
-	private void processTemperature(double teperature){
+	private void processTemperature(double teperature) {
 
 		if (teperature > max) {
 			max = teperature;
@@ -125,9 +127,9 @@ public class TemperatureTweet {
 		values.add(teperature);
 
 		double average = getAverage();
-		logger.info("average:" + average + "°C max:" + max + "°C at " + hhMM.format(new Date(maxStamp)) + " min:" + min + "°C at "
-				+ hhMM.format(new Date(minStamp)) + " now:" + teperature + "°C");
-		
+		logger.info("average:" + average + "°C max:" + max + "°C at " + hhMM.format(new Date(maxStamp)) + " min:" + min
+				+ "°C at " + hhMM.format(new Date(minStamp)) + " now:" + teperature + "°C");
+
 		Calendar now = Calendar.getInstance();
 		if (now.after(tempAt_00_00_c)) {
 			tweetTemperatureNow(teperature, tempAt_00_00_c);
@@ -146,8 +148,9 @@ public class TemperatureTweet {
 			tempAt_18_00_c = getNextTime(18);
 		}
 		if (now.after(nextTemperatureTweet)) {
-			String status = "Last day's temperatures: average:" + average + "°C, max:" + max + "°C at " + hhMM.format(new Date(maxStamp)) + ", min:" + min + "°C at "
-					+ hhMM.format(new Date(minStamp)) + ". #temperature";
+			String status = "Last day's temperatures: average:" + average + "°C, max:" + max + "°C at "
+					+ hhMM.format(new Date(maxStamp)) + ", min:" + min + "°C at " + hhMM.format(new Date(minStamp))
+					+ ". #temperature";
 			logger.info(status + " l:" + status.length());
 			try {
 				Util.post2Twitter(status);
@@ -161,9 +164,9 @@ public class TemperatureTweet {
 			nextTemperatureTweet = getNextTemperatureTweetTime();
 		}
 	}
-	
-	private void tweetTemperatureNow(double temp, Calendar now){
-		String status = "The temperature are " + temp+ "°C at " + hhMM.format(now.getTime()) + ". #temperature";
+
+	private void tweetTemperatureNow(double temp, Calendar now) {
+		String status = "The temperature are " + temp + "°C at " + hhMM.format(now.getTime()) + ". #temperature";
 		logger.info(status + " l:" + status.length());
 		try {
 			Util.post2Twitter(status);
@@ -172,7 +175,6 @@ public class TemperatureTweet {
 		}
 	}
 
-	
 	private double getAverage() {
 		double total = 0;
 		for (double value : values) {
@@ -196,7 +198,6 @@ public class TemperatureTweet {
 				.isRequired().create('s');
 		options.addOption(sensor);
 
-
 		if (args.length == 0) {
 			printUsage(options);
 		}
@@ -211,15 +212,15 @@ public class TemperatureTweet {
 			printUsage(options);
 		}
 
-		TemperatureTweet temperatureTwitter = new TemperatureTweet(cmd);
+		new TemperatureTweet(cmd);
 	}
 
 	private static void printUsage(Options options) {
 		HelpFormatter formatter = new HelpFormatter();
-		formatter.printHelp("TemperatureTweet", options,true);
+		formatter.printHelp("TemperatureTweet", options, true);
 		System.exit(1);
 	}
-	
+
 	private Calendar getNextTemperatureTweetTime() {
 		Calendar nextTime = getNextTime(8);
 		return nextTime;
@@ -245,6 +246,24 @@ public class TemperatureTweet {
 		}
 		logger.debug("Creating new next temperature tweet time: " + sdf.format(nextTime.getTime()));
 		return nextTime;
+	}
+
+	private void reconnectMqtt() {
+		while (!client.isConnected()) {
+			logger.info("Trying to reconnect to MQTT server");
+			try {
+				client.connect();
+			} catch (MqttException e) {
+			}
+			if (client.isConnected()) {
+				break;
+			}
+			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+			}
+		}
+		logger.info("Reconnected to MQTT server");
 	}
 
 }

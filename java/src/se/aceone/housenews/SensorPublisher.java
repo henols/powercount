@@ -22,6 +22,7 @@ import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
+import org.eclipse.paho.client.mqttv3.MqttSecurityException;
 import org.eclipse.paho.client.mqttv3.MqttTopic;
 
 public class SensorPublisher extends News {
@@ -50,6 +51,7 @@ public class SensorPublisher extends News {
 	final static String TEMPERATURE_TOPIC = "mulbetet49/temperature/";
 
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
+	private static SensorPublisher powerMeter;
 	// private int oldWh = Integer.MIN_VALUE;
 	private double oldKWh = Double.NaN;
 
@@ -92,6 +94,24 @@ public class SensorPublisher extends News {
 		client = new MqttClient(serverURI, "SensorPublisher", dataStore);
 		client.setCallback(new Callback());
 		client.connect();
+	}
+	
+	private void reconnectMqtt() {
+		while (!client.isConnected()) {
+			logger.info("Trying to reconnect to MQTT server");
+			try {
+				client.connect();
+			} catch (MqttException e) {
+			}
+			if (client.isConnected()) {
+				break;
+			}
+			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+			}
+		}
+		logger.info("Reconnected to MQTT server");
 	}
 
 	@Override
@@ -393,7 +413,7 @@ public class SensorPublisher extends News {
 			printUsage(options);
 		}
 
-		SensorPublisher powerMeter = new SensorPublisher(cmd);
+		powerMeter = new SensorPublisher(cmd);
 		powerMeter.init();
 		powerMeter.process();
 	}
@@ -418,8 +438,7 @@ public class SensorPublisher extends News {
 		@Override
 		public void connectionLost(Throwable cause) {
 			logger.error("Connection lost", cause);
-			System.exit(0);
+			reconnectMqtt();
 		}
 	}
-
 }
