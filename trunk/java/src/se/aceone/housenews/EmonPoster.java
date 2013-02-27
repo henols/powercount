@@ -11,6 +11,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttDefaultFilePersistence;
 import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -42,7 +43,11 @@ public class EmonPoster {
 			port = cmd.getOptionValue(PORT);
 		}
 		String serverURI = "tcp://" + address + ":"+port;
-		MqttClient client = new MqttClient(serverURI, "EmonPoster");
+		
+    	String tmpDir = System.getProperty("java.io.tmpdir");
+    	MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir+"/mqtt");
+
+		MqttClient client = new MqttClient(serverURI, "EmonPoster", dataStore);
 		client.setCallback(new Callback());
 		client.connect();
 		

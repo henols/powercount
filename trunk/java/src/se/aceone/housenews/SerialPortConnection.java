@@ -10,18 +10,18 @@ import java.util.Enumeration;
 
 import org.apache.log4j.Logger;
 
-public class SerialPortConnectin implements Connection {
-	private static Logger logger = Logger.getLogger(SerialPortConnectin.class);
+public class SerialPortConnection implements Connection {
+	private static Logger logger = Logger.getLogger(SerialPortConnection.class);
 	private final String portName;
 	protected InputStream is = null;
 	protected OutputStream os = null;
 	private final int baudRate;
 
-	public SerialPortConnectin(String port) throws Exception {
+	public SerialPortConnection(String port) throws Exception {
 		this(port, BAUD_RATE);
 	}
 
-	public SerialPortConnectin(String port, int baudRate) throws Exception {
+	public SerialPortConnection(String port, int baudRate) throws Exception {
 		this.portName = port;
 		this.baudRate = baudRate;
 		init();

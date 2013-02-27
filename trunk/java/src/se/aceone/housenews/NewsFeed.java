@@ -33,11 +33,11 @@ public class NewsFeed {
 		try {
 			if (powerMeterBluetoothAddress != null) {
 				logger.debug("Adding power meter.");
-				news.add(new PowerMeter(new SerialPortConnectin(powerMeterBluetoothAddress)));
+				news.add(new PowerMeter(new SerialPortConnection(powerMeterBluetoothAddress)));
 			}
 			if (heatPumpBluetoothAddress != null) {
 				logger.debug("Adding heat pump.");
-				news.add(new HeatPump(new SerialPortConnectin(heatPumpBluetoothAddress)));
+				news.add(new HeatPump(new SerialPortConnection(heatPumpBluetoothAddress)));
 			}
 		} catch (Exception e) {
 			logger.error("Failed to connect", e);

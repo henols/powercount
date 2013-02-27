@@ -17,6 +17,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttDefaultFilePersistence;
 import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -70,7 +71,7 @@ public class SensorPublisher extends News {
 		} else if (cmd.hasOption(COMPORT)) {
 			String comport = cmd.getOptionValue(COMPORT);
 			logger.info("Using Serial connection: " + comport);
-			connection = new SerialPortConnectin(comport);
+			connection = new SerialPortConnection(comport);
 		}
 		if (cmd.hasOption(PORT)) {
 			port = cmd.getOptionValue(PORT);
@@ -85,7 +86,10 @@ public class SensorPublisher extends News {
 		String serverURI = "tcp://" + address + ":" + port;
 		logger.info("Connecting to MQTT server : " + serverURI);
 
-		client = new MqttClient(serverURI, "SensorPublisher");
+    	String tmpDir = System.getProperty("java.io.tmpdir");
+    	MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir+"/mqtt");
+
+		client = new MqttClient(serverURI, "SensorPublisher", dataStore);
 		client.setCallback(new Callback());
 		client.connect();
 	}

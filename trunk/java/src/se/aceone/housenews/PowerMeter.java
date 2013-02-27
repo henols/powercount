@@ -389,7 +389,7 @@ public class PowerMeter extends News {
 	}
 
 	public static void main(String[] args) throws Exception {
-		PowerMeter powerMeter = new PowerMeter(new SerialPortConnectin("COM3"));
+		PowerMeter powerMeter = new PowerMeter(new SerialPortConnection("COM3"));
 		powerMeter.init();
 	}
 

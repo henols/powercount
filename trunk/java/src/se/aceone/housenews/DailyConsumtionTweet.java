@@ -1,11 +1,5 @@
 package se.aceone.housenews;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -17,6 +11,8 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttClientPersistence;
+import org.eclipse.paho.client.mqttv3.MqttDefaultFilePersistence;
 import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -26,7 +22,6 @@ import twitter4j.TwitterException;
 
 public class DailyConsumtionTweet {
 
-	private static final boolean DAYS = true;
 
 	final static String POWER_TOPIC = "mulbetet49/powermeter/power";
 	final static String DAILY_CONSUMPTION_TOPIC = "mulbetet49/powermeter/kwh/dailyconsumption";
@@ -36,8 +31,6 @@ public class DailyConsumtionTweet {
 	private static final String PORT = "port";
 	private static final String ADDRESS = "address";
 
-	private static final SimpleDateFormat sdf = new SimpleDateFormat();
-	private static final SimpleDateFormat hhMM = new SimpleDateFormat("HH:mm");
 
 	private static Logger logger = Logger.getLogger(DailyConsumtionTweet.class);
 
@@ -48,7 +41,11 @@ public class DailyConsumtionTweet {
 			port = cmd.getOptionValue(PORT);
 		}
 		String serverURI = "tcp://" + address + ":" + port;
-		MqttClient client = new MqttClient(serverURI, "EmonPoster");
+		
+    	String tmpDir = System.getProperty("java.io.tmpdir");
+    	MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir+"/mqtt");
+
+		MqttClient client = new MqttClient(serverURI, "DailyConsumtionTweet", dataStore );
 		client.setCallback(new Callback());
 		client.connect();
 
