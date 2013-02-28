@@ -73,7 +73,7 @@ public class EmonPoster {
 			String payLoad = new String(message.getPayload());
 			if(topicName.startsWith(TEMPERATURE_TOPIC)){
 				String sensorName = topicName.substring(TEMPERATURE_TOPIC.length());
-				result = "TEMP-"+sensorName+":"+payLoad;
+				result = sensorName+":"+payLoad;
 				logger.info(sensorName+" "+payLoad);
 			}else if (topicName.equals(POWER_TOPIC)) {
 				String sensorName = "power";
