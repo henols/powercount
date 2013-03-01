@@ -7,7 +7,7 @@
 @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;lib/log4j-1.2.16.jar
 @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;lib/org.eclipse.paho.client.mqttv3.jar
 @
-java -classpath %LOCAL_CLASS_PATH% se.aceone.housenews.TemperatureTweet -a 192.168.1.121 -s 1053C65B02080047
+java -classpath %LOCAL_CLASS_PATH% se.aceone.housenews.TemperatureTweet -a 192.168.1.121 -s TEMP-1053C65B02080047
 @pause
 @exit
 
