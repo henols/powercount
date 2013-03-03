@@ -83,7 +83,7 @@ public class SensorPublisher extends News {
 	public void init() throws Exception {
 		nextDailyConsumtion = getDailyConsumtionTime();
 		powerPingTime = System.currentTimeMillis() + POWER_PING_TIME;
-		temperaturePingTime = System.currentTimeMillis() + TEMPERATURE_PING_TIME;
+		temperaturePingTime = System.currentTimeMillis();
 		String serverURI = "tcp://" + address + ":" + port;
 		logger.info("Connecting to MQTT server : " + serverURI);
 
@@ -122,38 +122,41 @@ public class SensorPublisher extends News {
 
 	private void readTemperature(Calendar now) {
 		if (now.getTimeInMillis() > temperaturePingTime) {
-			temperaturePingTime += TEMPERATURE_PING_TIME;
-			publishTemperature(now);
+			if(publishTemperature(now)){
+				temperaturePingTime += TEMPERATURE_PING_TIME;
+			}
 		}
 	}
 
 	private void readPowerMeter(Calendar now) {
 
 		if (now.getTimeInMillis() > powerPingTime) {
+			if(publishPower()){
 			powerPingTime += POWER_PING_TIME;
-			publishPower();
+			}
 		}
 		if (now.after(nextDailyConsumtion)) {
-			publishDailyConsumtion();
-			nextDailyConsumtion = getDailyConsumtionTime();
+			if(publishDailyConsumtion()){
+				nextDailyConsumtion = getDailyConsumtionTime();
+			}
 		}
 	}
 
-	private void publishTemperature(Calendar now) {
+	private boolean publishTemperature(Calendar now) {
 		String result;
 		try {
 			result = readProtocol(TEMPERATURE);
 			if (result == null) {
-				return;
+				return false;
 			}
 		} catch (SocketException e) {
 			logger.error("SocketException", e);
 			reconnect();
-			return;
+			return false;
 		} catch (IOException e) {
 			logger.error("IOException", e);
 			reconnect();
-			return;
+			return false;
 		}
 
 		// Split result
@@ -165,7 +168,7 @@ public class SensorPublisher extends News {
 		String[] strings = result.split(",");
 		for (String string : strings) {
 			int indexOf = string.indexOf(':');
-			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC + string.substring(0, indexOf));
+			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC + string.substring(0, indexOf).trim());
 			message.setPayload(string.substring(indexOf + 1).getBytes());
 			try {
 				topic.publish(message);
@@ -175,23 +178,24 @@ public class SensorPublisher extends News {
 				logger.error("Failed to publish: " + message, e);
 			}
 		}
+		return true;
 	}
 
-	private void publishPower() {
+	private boolean publishPower() {
 		String result;
 		try {
 			result = readProtocol(READ_METER_1);
 			if (result == null) {
-				return;
+				return false;
 			}
 		} catch (SocketException e) {
 			logger.error("SocketException", e);
 			reconnect();
-			return;
+			return false;
 		} catch (IOException e) {
 			logger.error("IOException", e);
 			reconnect();
-			return;
+			return false;
 		}
 
 		String[] r = splitPowerResult(result);
@@ -202,7 +206,7 @@ public class SensorPublisher extends News {
 		// logger.debug("pulses:"+pulses+" power:"+power);
 		if (Long.parseLong(pulses) < 0 || Long.parseLong(power) < 0) {
 			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
-			return;
+			return false;
 		}
 		double kWh = toKWh(pulses);
 		// int Wh = Integer.parseInt(pulses);
@@ -235,15 +239,15 @@ public class SensorPublisher extends News {
 		// oldWh = Wh;
 		oldKWh = kWh;
 		// logger.debug("ping : " + sb.toString().trim());
-		return;
+		return true;
 	}
 
-	private void publishDailyConsumtion() {
+	private boolean publishDailyConsumtion() {
 		logger.debug("Read power counter.");
 		try {
 			String result = readProtocol(READ_METER_1);
 			if (result == null) {
-				return;
+				return false;
 			}
 			String[] r = splitPowerResult(result.toString());
 			@SuppressWarnings("unused")
@@ -276,8 +280,10 @@ public class SensorPublisher extends News {
 			}
 		} catch (Exception e) {
 			logger.error("Faild to tweet", e);
-			return;
+			return false;
 		}
+		return true;
+
 	}
 
 	private String[] splitPowerResult(String result) {
