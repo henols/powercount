@@ -50,9 +50,8 @@ public class EmonPoster {
 
 		client = new MqttClient(serverURI, "EmonPoster", dataStore);
 		client.setCallback(new Callback());
-		client.connect();
 		
-		client.subscribe(TOPICS);
+		connectMqtt();
 
 		logger.info("MQTT Client ID: "+client.getClientId());
 		logger.info("MQTT Server URI: "+client.getServerURI());
@@ -97,14 +96,15 @@ public class EmonPoster {
 		@Override
 		public void connectionLost(Throwable cause) {
 			logger.error("Connection lost", cause);
-			reconnectMqtt();
+			connectMqtt();
 		}
 	}
-	private void reconnectMqtt() {
+	private void connectMqtt() {
 		while (!client.isConnected()) {
 			logger.info("Trying to reconnect to MQTT server");
 			try {
 				client.connect();
+				client.subscribe(TOPICS);
 			} catch (MqttException e) {
 			}
 			if (client.isConnected()) {
