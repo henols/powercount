@@ -57,6 +57,8 @@ public class TemperatureTweet {
 
 	private MqttClient client;
 
+	private String sensor;
+
 	public TemperatureTweet(CommandLine cmd) throws MqttException, TwitterException {
 		String address = cmd.getOptionValue(ADDRESS);
 		String port = "1883";
@@ -70,12 +72,12 @@ public class TemperatureTweet {
 
 		client = new MqttClient(serverURI, "TemperatureTweet", dataStore);
 		client.setCallback(new Callback());
-		client.connect();
 
-		String sensor = cmd.getOptionValue(SENSOR);
+		sensor = cmd.getOptionValue(SENSOR);
 
-		client.subscribe(TEMPERATURE_TOPIC + sensor);
-
+		connectMqtt();
+		
+		
 		logger.info("MQTT Client ID: " + client.getClientId());
 		logger.info("MQTT Server URI: " + client.getServerURI());
 		logger.info("MQTT Is connected: " + client.isConnected());
@@ -109,7 +111,7 @@ public class TemperatureTweet {
 		@Override
 		public void connectionLost(Throwable cause) {
 			logger.error("Connection lost", cause);
-			reconnectMqtt();
+			connectMqtt();
 		}
 	}
 
@@ -248,11 +250,13 @@ public class TemperatureTweet {
 		return nextTime;
 	}
 
-	private void reconnectMqtt() {
+	private void connectMqtt() {
 		while (!client.isConnected()) {
 			logger.info("Trying to reconnect to MQTT server");
 			try {
 				client.connect();
+				client.subscribe(TEMPERATURE_TOPIC + sensor);
+
 			} catch (MqttException e) {
 			}
 			if (client.isConnected()) {

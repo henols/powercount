@@ -22,7 +22,6 @@ import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
-import org.eclipse.paho.client.mqttv3.MqttSecurityException;
 import org.eclipse.paho.client.mqttv3.MqttTopic;
 
 public class SensorPublisher extends News {
@@ -161,7 +160,7 @@ public class SensorPublisher extends News {
 		// power:252.4,temperature:15.4
 
 		MqttMessage message = new MqttMessage();
-		message.setQos(2);
+		message.setQos(1);
 
 		String[] strings = result.split(",");
 		for (String string : strings) {
@@ -212,7 +211,7 @@ public class SensorPublisher extends News {
 			double nKWh = kWh - oldKWh;
 
 			MqttMessage message = new MqttMessage();
-			message.setQos(2);
+			message.setQos(1);
 
 			MqttTopic topic = client.getTopic(KWH_TOPIC);
 			message.setPayload(String.valueOf(nKWh).getBytes());
@@ -256,7 +255,7 @@ public class SensorPublisher extends News {
 			// oldWh = 0;
 			oldKWh = 0;
 			MqttMessage message = new MqttMessage();
-			message.setQos(2);
+			message.setQos(1);
 
 			MqttTopic topic = client.getTopic(KWH_TOPIC+"/dailyconsumption");
 			message.setPayload(String.valueOf(kWh).getBytes());
