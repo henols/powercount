@@ -43,7 +43,7 @@ public class SensorPublisher extends News {
 	private static final boolean CLEAR_COUNT = true;
 
 	private static final long POWER_PING_TIME = 10000;
-	private static final long TEMPERATURE_PING_TIME = 300000;
+	 private static final long TEMPERATURE_PING_TIME = 300000;
 
 	final static String POWER_TOPIC = "mulbetet49/powermeter/power";
 	final static String KWH_TOPIC = "mulbetet49/powermeter/kwh";
@@ -82,19 +82,20 @@ public class SensorPublisher extends News {
 	@Override
 	public void init() throws Exception {
 		nextDailyConsumtion = getDailyConsumtionTime();
-		powerPingTime = System.currentTimeMillis() + POWER_PING_TIME;
-		temperaturePingTime = System.currentTimeMillis();
+		long currentTimeMillis = System.currentTimeMillis();
+		powerPingTime = currentTimeMillis + POWER_PING_TIME;
+		temperaturePingTime = currentTimeMillis;
 		String serverURI = "tcp://" + address + ":" + port;
 		logger.info("Connecting to MQTT server : " + serverURI);
 
-    	String tmpDir = System.getProperty("java.io.tmpdir");
-    	MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir+"/mqtt");
+		String tmpDir = System.getProperty("java.io.tmpdir");
+		MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir + "/mqtt");
 
 		client = new MqttClient(serverURI, "SensorPublisher", dataStore);
 		client.setCallback(new Callback());
 		client.connect();
 	}
-	
+
 	private void reconnectMqtt() {
 		while (!client.isConnected()) {
 			logger.info("Trying to reconnect to MQTT server");
@@ -122,21 +123,20 @@ public class SensorPublisher extends News {
 
 	private void readTemperature(Calendar now) {
 		if (now.getTimeInMillis() > temperaturePingTime) {
-			if(publishTemperature(now)){
+			if (publishTemperature(now)) {
 				temperaturePingTime += TEMPERATURE_PING_TIME;
 			}
 		}
 	}
 
 	private void readPowerMeter(Calendar now) {
-
 		if (now.getTimeInMillis() > powerPingTime) {
-			if(publishPower()){
-			powerPingTime += POWER_PING_TIME;
+			if (publishPower()) {
+				powerPingTime += POWER_PING_TIME;
 			}
 		}
 		if (now.after(nextDailyConsumtion)) {
-			if(publishDailyConsumtion()){
+			if (publishDailyConsumtion()) {
 				nextDailyConsumtion = getDailyConsumtionTime();
 			}
 		}
@@ -160,7 +160,7 @@ public class SensorPublisher extends News {
 		}
 
 		// Split result
-		// power:252.4,temperature:15.4
+		// power:22.44,temperature:15.50
 
 		MqttMessage message = new MqttMessage();
 		message.setQos(1);
@@ -168,7 +168,10 @@ public class SensorPublisher extends News {
 		String[] strings = result.split(",");
 		for (String string : strings) {
 			int indexOf = string.indexOf(':');
-			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC + string.substring(0, indexOf).trim());
+			if (indexOf < 0) {
+				continue;
+			}
+			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC + string.substring(0, indexOf));
 			message.setPayload(string.substring(indexOf + 1).getBytes());
 			try {
 				topic.publish(message);
@@ -261,7 +264,7 @@ public class SensorPublisher extends News {
 			MqttMessage message = new MqttMessage();
 			message.setQos(1);
 
-			MqttTopic topic = client.getTopic(KWH_TOPIC+"/dailyconsumption");
+			MqttTopic topic = client.getTopic(KWH_TOPIC + "/dailyconsumption");
 			message.setPayload(String.valueOf(kWh).getBytes());
 			try {
 				topic.publish(message);
@@ -331,10 +334,25 @@ public class SensorPublisher extends News {
 
 	private String readProtocol(byte[] protocol) throws IOException {
 		StringBuilder sb = new StringBuilder();
+		logger.debug("Read protocol:" + new String(protocol));
 		connection.getOutputStream().write(protocol);
 		connection.getOutputStream().flush();
 		char c;
-		while ((c = (char) connection.getInputStream().read()) != '\n') {
+		while (true) {
+			int sleeps = 0;
+			while (connection.getInputStream().available() <= 0) {
+				sleeps++;
+				if (sleeps > 20) {
+					return null;
+				}
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+				}
+			}
+			if ((c = (char) connection.getInputStream().read()) == '\n') {
+				break;
+			}
 			sb.append(c);
 			if (sb.length() > 135) {
 				String message = "To mutch to read... '" + sb + "'";
@@ -389,15 +407,13 @@ public class SensorPublisher extends News {
 		Options options = new Options();
 
 		options.addOption("p", PORT, true, "Mqtt server port, default 1883");
-		Option address = OptionBuilder.withLongOpt(ADDRESS).hasArg(true).withDescription("Mqtt server address")
-				.isRequired().create('a');
+		Option address = OptionBuilder.withLongOpt(ADDRESS).hasArg(true).withDescription("Mqtt server address").isRequired().create('a');
 
 		options.addOption(address);
 
 		OptionGroup optionGroup = new OptionGroup();
 		optionGroup.isRequired();
-		Option bluetooth = OptionBuilder.withLongOpt(BLUETOOTH).hasArg().withDescription("Buletooth address")
-				.create('b');
+		Option bluetooth = OptionBuilder.withLongOpt(BLUETOOTH).hasArg().withDescription("Buletooth address").create('b');
 		optionGroup.addOption(bluetooth);
 		Option comport = OptionBuilder.withLongOpt(COMPORT).hasArg().withDescription("Serial com port").create('c');
 		optionGroup.addOption(comport);
@@ -428,7 +444,7 @@ public class SensorPublisher extends News {
 		formatter.printHelp("SensorPublisher", options, true);
 		System.exit(1);
 	}
-	
+
 	class Callback implements MqttCallback {
 
 		@Override
