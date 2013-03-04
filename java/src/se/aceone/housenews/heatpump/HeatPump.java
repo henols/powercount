@@ -12,12 +12,11 @@ import java.util.StringTokenizer;
 import org.apache.log4j.Logger;
 
 import se.aceone.housenews.Connection;
-import se.aceone.housenews.News;
 import se.aceone.housenews.SerialPortConnection;
 import se.aceone.housenews.Util;
 import twitter4j.TwitterException;
 
-public class HeatPump extends News {
+public class HeatPump {
 
 	public static final int[] TEMPS = new int[] { //
 	Rego600.RADIATOR_RETURN_GT1, // Radiator return[GT1]
@@ -67,7 +66,6 @@ public class HeatPump extends News {
 		this.connection = connection;
 	}
 
-	@Override
 	public void init() throws Exception {
 		nextTweet = getNextTweetTime();
 		pingTime = System.currentTimeMillis() + PING_TIME;
@@ -87,7 +85,6 @@ public class HeatPump extends News {
 		return camelCaseString;
 	}
 
-	@Override
 	public void tick() {
 		Calendar now = Calendar.getInstance();
 		// logger.debug(sdf.format(now.getTime()) + " before " +

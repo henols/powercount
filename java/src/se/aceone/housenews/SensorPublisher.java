@@ -24,7 +24,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 import org.eclipse.paho.client.mqttv3.MqttTopic;
 
-public class SensorPublisher extends News {
+public class SensorPublisher {
 
 	private static final String BLUETOOTH = "bluetooth";
 	private static final String COMPORT = "comport";
@@ -79,7 +79,6 @@ public class SensorPublisher extends News {
 		}
 	}
 
-	@Override
 	public void init() throws Exception {
 		nextDailyConsumtion = getDailyConsumtionTime();
 		long currentTimeMillis = System.currentTimeMillis();
@@ -114,7 +113,6 @@ public class SensorPublisher extends News {
 		logger.info("Reconnected to MQTT server");
 	}
 
-	@Override
 	public void tick() {
 		Calendar now = Calendar.getInstance();
 		readPowerMeter(now);
