@@ -3,7 +3,7 @@
 @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;HouseNews.jar
 @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;resources
 @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;lib/commons-cli.jar
-@rem set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;lib/twitter4j-core-2.2.4.jar
+@rem @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;lib/twitter4j-core-3.0.3.jar
 @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;lib/log4j-1.2.16.jar
 @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;lib/bluecove-2.1.1-SNAPSHOT.jar
 @set LOCAL_CLASS_PATH=%LOCAL_CLASS_PATH%;lib/RXTXcomm.jar
