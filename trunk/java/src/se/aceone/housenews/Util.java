@@ -64,7 +64,7 @@ public class Util {
 	}
 
 	public static int post2Emon(String msg) throws MalformedURLException, IOException {
-		String url = emonUri + "/api/post?json={" + msg + "}&apikey=" + emonApiKey;
+		String url = emonUri + "/input/post.json?json={" + msg + "}&apikey=" + emonApiKey;
 		HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
 		int respCode = connection.getResponseCode();
 		connection.disconnect();
