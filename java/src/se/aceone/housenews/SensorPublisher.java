@@ -43,14 +43,15 @@ public class SensorPublisher {
 	private static final boolean CLEAR_COUNT = true;
 
 	private static final long POWER_PING_TIME = 10000;
-	 private static final long TEMPERATURE_PING_TIME = 300000;
+	private static final long TEMPERATURE_PING_TIME = 300000;
 
-	final static String POWER_TOPIC = "mulbetet49/powermeter/power";
-	final static String KWH_TOPIC = "mulbetet49/powermeter/kwh";
-	final static String TEMPERATURE_TOPIC = "mulbetet49/temperature/";
+	final static String LOCATION = "mulbetet49";
+
+	final String POWER_TOPIC;
+	final String KWH_TOPIC;
+	final String TEMPERATURE_TOPIC;
 
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
-	private static SensorPublisher powerMeter;
 	// private int oldWh = Integer.MIN_VALUE;
 	private double oldKWh = Double.NaN;
 
@@ -62,9 +63,14 @@ public class SensorPublisher {
 	private Connection connection;
 	private String address;
 	private String port = "1883";
+	private String location;
 
 	public SensorPublisher(CommandLine cmd) throws Exception {
 		address = cmd.getOptionValue(ADDRESS);
+		logger.info("Using address: " + address);
+		location = cmd.getOptionValue(LOCATION);
+		logger.info("Using location name: " + location);
+		
 		if (cmd.hasOption(BLUETOOTH)) {
 			String bluetooth = cmd.getOptionValue(BLUETOOTH);
 			logger.info("Using Bluetooth connection: " + bluetooth);
@@ -77,6 +83,9 @@ public class SensorPublisher {
 		if (cmd.hasOption(PORT)) {
 			port = cmd.getOptionValue(PORT);
 		}
+		POWER_TOPIC = location + "/powermeter/power";
+		KWH_TOPIC = location + "/powermeter/kwh";
+		TEMPERATURE_TOPIC = location + "/temperature/";
 	}
 
 	public void init() throws Exception {
@@ -86,6 +95,7 @@ public class SensorPublisher {
 		temperaturePingTime = currentTimeMillis;
 		String serverURI = "tcp://" + address + ":" + port;
 		logger.info("Connecting to MQTT server : " + serverURI);
+		
 
 		String tmpDir = System.getProperty("java.io.tmpdir");
 		MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir + "/mqtt");
@@ -279,7 +289,7 @@ public class SensorPublisher {
 				}
 				connection.getOutputStream().write('\n');
 			}
-		} catch (Exception e) {
+		} catch (IOException e) {
 			logger.error("Faild to tweet", e);
 			return false;
 		}
@@ -405,13 +415,18 @@ public class SensorPublisher {
 		Options options = new Options();
 
 		options.addOption("p", PORT, true, "Mqtt server port, default 1883");
-		Option address = OptionBuilder.withLongOpt(ADDRESS).hasArg(true).withDescription("Mqtt server address").isRequired().create('a');
-
+		Option address = OptionBuilder.withLongOpt(ADDRESS).hasArg(true).withDescription("Mqtt server address")
+				.isRequired().create('a');
 		options.addOption(address);
+
+		Option location = OptionBuilder.withLongOpt(LOCATION).hasArg(true).withDescription("Location name")
+				.isRequired().create('l');
+		options.addOption(location);
 
 		OptionGroup optionGroup = new OptionGroup();
 		optionGroup.isRequired();
-		Option bluetooth = OptionBuilder.withLongOpt(BLUETOOTH).hasArg().withDescription("Buletooth address").create('b');
+		Option bluetooth = OptionBuilder.withLongOpt(BLUETOOTH).hasArg().withDescription("Buletooth address")
+				.create('b');
 		optionGroup.addOption(bluetooth);
 		Option comport = OptionBuilder.withLongOpt(COMPORT).hasArg().withDescription("Serial com port").create('c');
 		optionGroup.addOption(comport);
@@ -432,9 +447,9 @@ public class SensorPublisher {
 			printUsage(options);
 		}
 
-		powerMeter = new SensorPublisher(cmd);
-		powerMeter.init();
-		powerMeter.process();
+		SensorPublisher sensorPublisher = new SensorPublisher(cmd);
+		sensorPublisher.init();
+		sensorPublisher.process();
 	}
 
 	private static void printUsage(Options options) {
