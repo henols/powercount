@@ -1,5 +1,6 @@
 package se.aceone.housenews;
 
+
 import java.io.IOException;
 import java.net.SocketException;
 import java.util.Calendar;
@@ -30,6 +31,7 @@ public class SensorPublisher {
 	private static final String COMPORT = "comport";
 	private static final String PORT = "port";
 	private static final String ADDRESS = "address";
+	private final static String LOCATION = "location";
 
 	private static final byte[] READ_METER_1 = { '4', '0' };
 	@SuppressWarnings("unused")
@@ -45,7 +47,6 @@ public class SensorPublisher {
 	private static final long POWER_PING_TIME = 10000;
 	private static final long TEMPERATURE_PING_TIME = 300000;
 
-	final static String LOCATION = "mulbetet49";
 
 	final String POWER_TOPIC;
 	final String KWH_TOPIC;
@@ -70,16 +71,29 @@ public class SensorPublisher {
 		logger.info("Using address: " + address);
 		location = cmd.getOptionValue(LOCATION);
 		logger.info("Using location name: " + location);
-		
+
+		String connectionClass = null;
+		String connectionName = null;
 		if (cmd.hasOption(BLUETOOTH)) {
-			String bluetooth = cmd.getOptionValue(BLUETOOTH);
-			logger.info("Using Bluetooth connection: " + bluetooth);
-			connection = new BlueToothConnection(bluetooth);
+			connectionName = cmd.getOptionValue(BLUETOOTH);
+			logger.info("Using Bluetooth connection: " + connectionName);
+			connectionClass = "se.aceone.housenews.BlueToothConnection";
 		} else if (cmd.hasOption(COMPORT)) {
-			String comport = cmd.getOptionValue(COMPORT);
-			logger.info("Using Serial connection: " + comport);
-			connection = new SerialPortConnection(comport);
+			connectionName = cmd.getOptionValue(COMPORT);
+			logger.info("Using Serial connection: " + connectionName);
+			if (connectionName.startsWith("/")) {
+				connectionClass = "se.aceone.housenews.Pi4JSerialConnection";
+			} else {
+				connectionClass = "se.aceone.housenews.RXTXSerialConnection";
+			}
 		}
+		
+		logger.info("Using connection type: " + connectionClass);
+		
+		Class<?> clazz = getClass().getClassLoader().loadClass(connectionClass);
+		connection = (Connection) clazz.newInstance();
+		
+		connection.init(connectionName);
 		if (cmd.hasOption(PORT)) {
 			port = cmd.getOptionValue(PORT);
 		}
@@ -95,7 +109,6 @@ public class SensorPublisher {
 		temperaturePingTime = currentTimeMillis;
 		String serverURI = "tcp://" + address + ":" + port;
 		logger.info("Connecting to MQTT server : " + serverURI);
-		
 
 		String tmpDir = System.getProperty("java.io.tmpdir");
 		MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir + "/mqtt");
