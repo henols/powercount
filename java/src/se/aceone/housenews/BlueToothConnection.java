@@ -11,16 +11,13 @@ import org.apache.log4j.Logger;
 
 public class BlueToothConnection implements Connection  {
 	private static Logger logger = Logger.getLogger(BlueToothConnection.class);
-	private final String bluetoothAddress;
 	protected InputStream is = null;
 	protected OutputStream os = null;
 
-	public BlueToothConnection(String bluetoothAddress) throws Exception {
-		this.bluetoothAddress = bluetoothAddress;
-		init();
+	public BlueToothConnection(){
 	}
 	
-	private void init() throws Exception {
+	public void init(String bluetoothAddress) throws Exception {
 		UUID uuid = new UUID(bluetoothAddress, false);
 		String connectionURL = "btspp://" + uuid.toString() + ":1;master=false;encrypt=false;authenticate=false";
 		logger.info("Connecting to Blue Tooth device: " + uuid.toString());
