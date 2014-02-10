@@ -42,9 +42,9 @@ public class SensorPublisher {
 	private static final byte[] READ_METER_2 = { '4', '1' };
 	private static final byte[][] READ_METER = { READ_METER_1, READ_METER_2};
 
-	private static final int METER_KWH_1 = 1;
-	private static final int METER_KWH_2 = 10;
-	private static final int[] METER_KWH = { METER_KWH_1, METER_KWH_2};
+//	private static final int METER_KWH_1 = 1;
+//	private static final int METER_KWH_2 = 10;
+//	private static final int[] METER_KWH = { METER_KWH_1, METER_KWH_2};
 	
 	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
 	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
@@ -266,7 +266,7 @@ public class SensorPublisher {
 			} catch (MqttException e) {
 				logger.error("Failed to publish: " + message, e);
 			}
-			topic = client.getTopic(POWER_TOPIC);
+			topic = client.getTopic(POWER_TOPIC+meter);
 			message.setPayload(power.getBytes());
 			try {
 				topic.publish(message);
