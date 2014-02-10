@@ -33,12 +33,24 @@ public class SensorPublisher {
 	private static final String ADDRESS = "address";
 	private final static String LOCATION = "location";
 
+	
+	private static final byte METER_1 =  0;
+	private static final byte METER_2 =  1;
+	
+	
 	private static final byte[] READ_METER_1 = { '4', '0' };
-	@SuppressWarnings("unused")
 	private static final byte[] READ_METER_2 = { '4', '1' };
+	private static final byte[][] READ_METER = { READ_METER_1, READ_METER_2};
+
+	private static final int METER_KWH_1 = 1;
+	private static final int METER_KWH_2 = 10;
+	private static final int[] METER_KWH = { METER_KWH_1, METER_KWH_2};
+	
 	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
-	@SuppressWarnings("unused")
 	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
+	private static final byte[][] CONFIRM_METER = { CONFIRM_METER_1, CONFIRM_METER_2 };
+
+	
 	private static final byte[] TEMPERATURE = { 't', 't' };
 
 	private static final boolean DAYS = true;
@@ -54,7 +66,7 @@ public class SensorPublisher {
 
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
 	// private int oldWh = Integer.MIN_VALUE;
-	private double oldKWh = Double.NaN;
+	private double oldKWh[] = {Double.NaN,Double.NaN};
 
 	private long powerPingTime;
 	private long temperaturePingTime;
@@ -206,9 +218,13 @@ public class SensorPublisher {
 	}
 
 	private boolean publishPower() {
+		return publishPower(METER_1) && publishPower(METER_2);
+	}
+	
+	private boolean publishPower(byte meter) {
 		String result;
 		try {
-			result = readProtocol(READ_METER_1);
+			result = readProtocol(READ_METER[meter]);
 			if (result == null) {
 				return false;
 			}
@@ -235,13 +251,13 @@ public class SensorPublisher {
 		double kWh = toKWh(pulses);
 		// int Wh = Integer.parseInt(pulses);
 
-		if (!Double.isNaN(oldKWh)) {
-			double nKWh = kWh - oldKWh;
+		if (!Double.isNaN(oldKWh[meter])) {
+			double nKWh = kWh - oldKWh[meter];
 
 			MqttMessage message = new MqttMessage();
 			message.setQos(1);
 
-			MqttTopic topic = client.getTopic(KWH_TOPIC);
+			MqttTopic topic = client.getTopic(KWH_TOPIC+meter);
 			message.setPayload(String.valueOf(nKWh).getBytes());
 			try {
 				topic.publish(message);
@@ -261,15 +277,18 @@ public class SensorPublisher {
 			}
 		}
 		// oldWh = Wh;
-		oldKWh = kWh;
+		oldKWh[meter] = kWh;
 		// logger.debug("ping : " + sb.toString().trim());
 		return true;
 	}
 
 	private boolean publishDailyConsumtion() {
+		return publishDailyConsumtion(METER_1) && publishDailyConsumtion(METER_2);
+	}
+	private boolean publishDailyConsumtion(byte meter) {
 		logger.debug("Read power counter.");
 		try {
-			String result = readProtocol(READ_METER_1);
+			String result = readProtocol(READ_METER[meter]);
 			if (result == null) {
 				return false;
 			}
@@ -281,11 +300,11 @@ public class SensorPublisher {
 			String power = r[2];
 			double kWh = toKWh(pulses);
 			// oldWh = 0;
-			oldKWh = 0;
+			oldKWh[meter] = 0;
 			MqttMessage message = new MqttMessage();
 			message.setQos(1);
 
-			MqttTopic topic = client.getTopic(KWH_TOPIC + "/dailyconsumption");
+			MqttTopic topic = client.getTopic(KWH_TOPIC + "/dailyconsumption"+meter);
 			message.setPayload(String.valueOf(kWh).getBytes());
 			try {
 				topic.publish(message);
@@ -295,7 +314,7 @@ public class SensorPublisher {
 				logger.error("Failed to publish: " + message, e);
 			}
 			if (CLEAR_COUNT) {
-				connection.getOutputStream().write(CONFIRM_METER_1);
+				connection.getOutputStream().write(CONFIRM_METER[meter]);
 				for (int i = 0; i < pulses.length(); i++) {
 					byte charAt = (byte) pulses.charAt(i);
 					connection.getOutputStream().write(charAt);
