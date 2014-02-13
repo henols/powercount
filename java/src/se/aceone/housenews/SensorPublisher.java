@@ -4,6 +4,7 @@ package se.aceone.housenews;
 import java.io.IOException;
 import java.net.SocketException;
 import java.util.Calendar;
+import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 
 import org.apache.commons.cli.CommandLine;
@@ -42,9 +43,9 @@ public class SensorPublisher {
 	private static final byte[] READ_METER_2 = { '4', '1' };
 	private static final byte[][] READ_METER = { READ_METER_1, READ_METER_2};
 
-//	private static final int METER_KWH_1 = 1;
-//	private static final int METER_KWH_2 = 10;
-//	private static final int[] METER_KWH = { METER_KWH_1, METER_KWH_2};
+	private static final double METER_KWH_1 = 1;
+	private static final double METER_KWH_2 = .5;
+	private static final double[] METER_KWH = { METER_KWH_1, METER_KWH_2};
 	
 	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
 	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
@@ -106,6 +107,8 @@ public class SensorPublisher {
 		connection = (Connection) clazz.newInstance();
 		
 		connection.init(connectionName);
+		connection.open();
+				
 		if (cmd.hasOption(PORT)) {
 			port = cmd.getOptionValue(PORT);
 		}
@@ -125,7 +128,7 @@ public class SensorPublisher {
 		String tmpDir = System.getProperty("java.io.tmpdir");
 		MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir + "/mqtt");
 
-		client = new MqttClient(serverURI, "SensorPublisher", dataStore);
+		client = new MqttClient(serverURI, "SensorPublisher"+location, dataStore);
 		client.setCallback(new Callback());
 		client.connect();
 	}
@@ -158,6 +161,12 @@ public class SensorPublisher {
 		if (now.getTimeInMillis() > temperaturePingTime) {
 			if (publishTemperature(now)) {
 				temperaturePingTime += TEMPERATURE_PING_TIME;
+			} else {
+				connection.close();
+				try {
+					connection.open();
+				} catch (Exception e) {
+				}
 			}
 		}
 	}
@@ -166,11 +175,23 @@ public class SensorPublisher {
 		if (now.getTimeInMillis() > powerPingTime) {
 			if (publishPower()) {
 				powerPingTime += POWER_PING_TIME;
+			} else {
+				connection.close();
+				try {
+					connection.open();
+				} catch (Exception e) {
+				}
 			}
 		}
 		if (now.after(nextDailyConsumtion)) {
 			if (publishDailyConsumtion()) {
 				nextDailyConsumtion = getDailyConsumtionTime();
+			} else {
+				connection.close();
+				try {
+					connection.open();
+				} catch (Exception e) {
+				}
 			}
 		}
 	}
@@ -238,7 +259,13 @@ public class SensorPublisher {
 			return false;
 		}
 
-		String[] r = splitPowerResult(result);
+		String[] r;
+		try {
+			r = splitPowerResult(result);
+		} catch (NoSuchElementException e){
+			logger.error("Got some crapp from reader: "+result , e);
+			return false;
+		}
 		@SuppressWarnings("unused")
 		String counter = r[0];
 		String pulses = r[1];
@@ -248,7 +275,7 @@ public class SensorPublisher {
 			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
 			return false;
 		}
-		double kWh = toKWh(pulses);
+		double kWh = toKWh(pulses) / METER_KWH[meter];
 		// int Wh = Integer.parseInt(pulses);
 
 		if (!Double.isNaN(oldKWh[meter])) {
@@ -298,7 +325,7 @@ public class SensorPublisher {
 			String pulses = r[1];
 			@SuppressWarnings("unused")
 			String power = r[2];
-			double kWh = toKWh(pulses);
+			double kWh = toKWh(pulses) / METER_KWH[meter];
 			// oldWh = 0;
 			oldKWh[meter] = 0;
 			MqttMessage message = new MqttMessage();
@@ -329,7 +356,7 @@ public class SensorPublisher {
 
 	}
 
-	private String[] splitPowerResult(String result) {
+	private String[] splitPowerResult(String result) throws NoSuchElementException {
 		String[] r = new String[3];
 		StringTokenizer st = new StringTokenizer(result, ",");
 		r[0] = st.nextToken();
@@ -382,7 +409,8 @@ public class SensorPublisher {
 			int sleeps = 0;
 			while (connection.getInputStream().available() <= 0) {
 				sleeps++;
-				if (sleeps > 20) {
+				if (sleeps > 80) {
+					logger.error("Slept to long.");
 					return null;
 				}
 				try {
