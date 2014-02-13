@@ -16,19 +16,24 @@ public class RXTXSerialConnection implements Connection {
 	protected InputStream is = null;
 	protected OutputStream os = null;
 	private int baudRate;
+	private CommPort commPort;
 
 	public RXTXSerialConnection() {
 	}
 
-	public void init(String port) throws Exception {
+	public void init(String port)  {
+		
 		this.portName = port;
+	}
+	@Override
+	public void open() throws Exception {
 		this.baudRate = BAUD_RATE;
 		listPorts();
 		CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
 		if (portIdentifier.isCurrentlyOwned()) {
 			logger.error("Error: Port is currently in use");
 		} else {
-			CommPort commPort = portIdentifier.open(this.getClass().getName(), 2000);
+			 commPort = portIdentifier.open(this.getClass().getName(), 2000);
 
 			if (commPort instanceof SerialPort) {
 				SerialPort serialPort = (SerialPort) commPort;
@@ -88,5 +93,13 @@ public class RXTXSerialConnection implements Connection {
 	@Override
 	public OutputStream getOutputStream() {
 		return os;
+	}
+	
+	
+	@Override
+	public void close() {
+		if(commPort!=null){
+			commPort.close();
+		}
 	}
 }

@@ -1,4 +1,5 @@
 package se.aceone.housenews;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -6,18 +7,24 @@ import java.io.OutputStream;
 import com.pi4j.io.serial.Serial;
 import com.pi4j.io.serial.SerialFactory;
 
-
 public class Pi4JSerialConnection implements Connection {
 
 	private OutputStream os;
 	private InputStream is;
+	private Serial serial;
+	private String device;
 
 	public Pi4JSerialConnection() {
 	}
 
 	@Override
-	public void init(String device) throws Exception {
-		final Serial serial = SerialFactory.createInstance();
+	public void init(String device)  {
+		this.device = device;
+	}
+	
+	@Override
+	public void open()throws Exception{
+		serial = SerialFactory.createInstance();
 		serial.open(device, BAUD_RATE);
 		os = new LocalOutputStream(serial);
 		is = new LocalInputStream(serial);
@@ -81,4 +88,12 @@ public class Pi4JSerialConnection implements Connection {
 		}
 
 	}
+
+	@Override
+	public void close() {
+		if (serial != null) {
+			serial.close();
+		}
+	}
+
 }
