@@ -128,7 +128,7 @@ public class SensorPublisher {
 		String tmpDir = System.getProperty("java.io.tmpdir");
 		MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir + "/mqtt");
 
-		client = new MqttClient(serverURI, "SensorPublisher"+location, dataStore);
+		client = new MqttClient(serverURI, "SensPub" + location, dataStore);
 		client.setCallback(new Callback());
 		client.connect();
 	}
@@ -409,7 +409,7 @@ public class SensorPublisher {
 			int sleeps = 0;
 			while (connection.getInputStream().available() <= 0) {
 				sleeps++;
-				if (sleeps > 80) {
+				if (sleeps > 20) {
 					logger.error("Slept to long.");
 					return null;
 				}
