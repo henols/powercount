@@ -79,7 +79,7 @@ public class SensorPublisher {
 	private String port = "1883";
 	private String location;
 
-	public SensorPublisher(CommandLine cmd) throws Exception {
+	public SensorPublisher(CommandLine cmd) throws Exception  {
 		address = cmd.getOptionValue(ADDRESS);
 		logger.info("Using address: " + address);
 		location = cmd.getOptionValue(LOCATION);
@@ -117,7 +117,7 @@ public class SensorPublisher {
 		TEMPERATURE_TOPIC = location + "/temperature/";
 	}
 
-	public void init() throws Exception {
+	public void init() throws MqttException {
 		nextDailyConsumtion = getDailyConsumtionTime();
 		long currentTimeMillis = System.currentTimeMillis();
 		powerPingTime = currentTimeMillis + POWER_PING_TIME;
@@ -131,6 +131,7 @@ public class SensorPublisher {
 		client = new MqttClient(serverURI, "SensPub" + location, dataStore);
 		client.setCallback(new Callback());
 		client.connect();
+		logger.info("Connected to MQTT server : " + serverURI);
 	}
 
 	private void reconnectMqtt() {
@@ -349,7 +350,7 @@ public class SensorPublisher {
 				connection.getOutputStream().write('\n');
 			}
 		} catch (IOException e) {
-			logger.error("Faild to tweet", e);
+			logger.error("Failed to tweet", e);
 			return false;
 		}
 		return true;
@@ -506,9 +507,17 @@ public class SensorPublisher {
 			logger.error(e.getMessage());
 			printUsage(options);
 		}
-
 		SensorPublisher sensorPublisher = new SensorPublisher(cmd);
-		sensorPublisher.init();
+		while(true){
+			try{
+				sensorPublisher.init();
+			} catch(MqttException e){
+				logger.error("Failed to init.", e);
+				Thread.sleep(10000);
+				continue;
+			}
+			break;
+		}
 		sensorPublisher.process();
 	}
 
