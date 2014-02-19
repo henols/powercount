@@ -8,25 +8,33 @@
 #define COUNTER_1 0
 #define COUNTER_2 1
 
-const byte CONFIRM = 'c';
-const byte NAME = '3';
-const byte PULSES_TEXT = '4';
-const byte DUMP = 'd';
-const byte TEMPERATURE = 't';
+#define CONFIRM 'c'
+#define NAME '3'
+#define PULSES_TEXT '4'
+#define DUMP 'd'
+#define TEMPERATURE 't'
 
-const int BAUD_RATE = 19200;
-const byte LED_PIN_1 = 13; // LED connected to digital pin 13
-const byte LED_PIN_2 = 9; // LED connected to digital pin 14
+#define BAUD_RATE 19200
 
+#define LED_PIN_1 13 // LED connected to digital pin 13
+#define LED_PIN_2 9 // LED connected to digital pin 9
 const byte LED_PINS[2] = { LED_PIN_1, LED_PIN_2 };
 
-const byte PULSE_PIN_1 = 2; //
-const byte PULSE_PIN_2 = 3; //
 
-long pulseCount[2] = { 0, 0 }; //Number of pulses, used to measure energy.
+#define PULSE_LOOP_1 1
+#define PULSE_LOOP_2 1
+const byte PULSE_LOOP[2] = { PULSE_LOOP_1, PULSE_LOOP_2 };
+
+#define PULSE_PIN_1 2 //
+#define PULSE_PIN_2 3 //
+
+unsigned long pulseCount[2] = { 0, 0 }; //Number of pulses, used to measure energy.
 unsigned long pulseTime[2], lastTime[2]; //Used to measure power.
-int power[2]; //power and energy
-int ppwh[2] = { 1, 1 }; ////1000 pulses/kwh = 1 pulse per wh - Number of pulses per wh - found or set on the meter.
+unsigned int pulseLoop[2];
+
+unsigned int power[2]; //power and energy
+ double ppwh[2] = { 1, .5};  //1000 pulses/kwh = 1 pulse per wh - Number of pulses per wh - found or set on the meter.
+ // unsigned int ppwh[2] = { 1, 10 }; ////1000 pulses/kwh = 1 pulse per wh - Number of pulses per wh - found or set on the meter.
 
 long lastSerial;
 
@@ -49,13 +57,17 @@ void setup() {
 
 	Serial.begin(BAUD_RATE);
 
+	pinMode(PULSE_PIN_1, INPUT_PULLUP); // sets the digital pin as INPUT
+	pinMode(PULSE_PIN_2, INPUT_PULLUP); // sets the digital pin as INPUT
 	attachInterrupt(0, onPulse1, FALLING); // KWH interrupt attached to IRQ 1  = pin2 
 	attachInterrupt(1, onPulse2, FALLING); // KWH interrupt attached to IRQ 1  = pin3
 
 	changeLedState(COUNTER_1);
 	changeLedState(COUNTER_2);
 
-	// Start up the library
+        pulseLoop[COUNTER_1] = PULSE_LOOP_1;
+        pulseLoop[COUNTER_2] = PULSE_LOOP_2;
+        	// Start up the library
 	sensors.begin();
 
 	// Loop through each device, print out address
@@ -103,21 +115,26 @@ void onPulse2() {
 }
 
 void onPulse(int counter) {
+	pulseTime[counter] = micros();
 	changeLedState(counter);
 
-	lastTime[counter] = pulseTime[counter]; //used to measure time between pulses.
-	pulseTime[counter] = micros();
 
 	pulseCount[counter]++; //pulseCounter               
+        
+        pulseLoop[counter]--;
+        if(pulseLoop[counter] <= 0){
+//  	  unsigned long timeDiff;
+//          if (pulseTime[counter] < lastTime[counter]) { // If there has been an overflow in micros()
+//  	    	timeDiff = 4294967295 - lastTime[counter] + pulseTime[counter];
+//   	  } else {
+//  		timeDiff = (pulseTime[counter] - lastTime[counter]);
+//  	  }
+  	  unsigned long timeDiff = pulseTime[counter] - lastTime[counter];
 
-	long timeDiff;
-	if (pulseTime[counter] < lastTime[counter]) { // If there has been an overflow in micros()
-		timeDiff = 4294967295 - lastTime[counter] + pulseTime[counter];
-	} else {
-		timeDiff = (pulseTime[counter] - lastTime[counter]);
-	}
-
-	power[counter] = int(3600000000.0 / timeDiff / ppwh[counter]); //Calculate power
+  	  power[counter] = int(3600000000.0 / timeDiff / ppwh[counter] * PULSE_LOOP[counter]); //Calculate power
+          pulseLoop[counter] = PULSE_LOOP[counter];
+          lastTime[counter] = pulseTime[counter]; //used to measure time between pulses.
+        }
 }
 
 void confirmCount(byte ind) {
