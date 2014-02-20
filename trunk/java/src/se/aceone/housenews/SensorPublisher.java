@@ -43,10 +43,6 @@ public class SensorPublisher {
 	private static final byte[] READ_METER_2 = { '4', '1' };
 	private static final byte[][] READ_METER = { READ_METER_1, READ_METER_2};
 
-	private static final double METER_KWH_1 = 1;
-	private static final double METER_KWH_2 = .5;
-	private static final double[] METER_KWH = { METER_KWH_1, METER_KWH_2};
-	
 	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
 	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
 	private static final byte[][] CONFIRM_METER = { CONFIRM_METER_1, CONFIRM_METER_2 };
@@ -276,7 +272,7 @@ public class SensorPublisher {
 			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
 			return false;
 		}
-		double kWh = toKWh(pulses) / METER_KWH[meter];
+		double kWh = toKWh(pulses);
 		// int Wh = Integer.parseInt(pulses);
 
 		if (!Double.isNaN(oldKWh[meter])) {
@@ -326,7 +322,7 @@ public class SensorPublisher {
 			String pulses = r[1];
 			@SuppressWarnings("unused")
 			String power = r[2];
-			double kWh = toKWh(pulses) / METER_KWH[meter];
+			double kWh = toKWh(pulses);
 			// oldWh = 0;
 			oldKWh[meter] = 0;
 			MqttMessage message = new MqttMessage();
