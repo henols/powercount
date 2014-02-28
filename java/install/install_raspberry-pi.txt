@@ -1,0 +1,42 @@
+sudo apt-get update
+
+Install Pi4J (http://pi4j.com/install.html)
+
+Download a copy of the latest Pi4J Debian/Raspian installer package (.deb) file. You can use the following command on the Raspberry Pi's console to download the latest pi4j.jar build: 
+wget http://pi4j.googlecode.com/files/pi4j-0.0.5.deb
+
+NOTE: If you have a previous version of Pi4J installed, please uninstall it first.
+
+Once downloaded, use the following command to perform the installation: 
+sudo dpkg -i pi4j-0.0.5.deb
+
+
+Disable serial console (https://github.com/lurch/rpi-serial-console)
+
+sudo wget https://raw.github.com/lurch/rpi-serial-console/master/rpi-serial-console -O /usr/bin/rpi-serial-console 
+sudo chmod +x /usr/bin/rpi-serial-console
+
+sudo rpi-serial-console disable
+
+Install Sensor publisher
+
+Copy housenews to home dir 
+
+cd housenews/ 
+chmod +x ./SensorPublisher
+sudo mv sensor_publisher /etc/init.d
+sudo chmod +x /etc/init.d/sensor_publisher
+sudo update-rc.d sensor_publisher defaults
+
+Modify arguments in SensorPublisher
+nano SensorPublisher 
+
+Install Mosquitto (http://mosquitto.org/2013/01/mosquitto-debian-repository/)
+sudo apt-get install mosquitto
+
+Install Node-RED
+http://learn.adafruit.com/raspberry-pi-hosting-node-red/what-is-node-red
+
+Install Emoncms
+http://emoncms.org/site/docs/installlinux
+

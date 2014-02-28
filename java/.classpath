@@ -9,5 +9,6 @@
 	<classpathentry kind="lib" path="lib/RXTXcomm.jar"/>
 	<classpathentry kind="lib" path="lib/org.eclipse.paho.client.mqttv3.jar" sourcepath="/org.eclipse.paho.client.mqttv3"/>
 	<classpathentry kind="lib" path="lib/twitter4j-core-3.0.3.jar"/>
+	<classpathentry kind="lib" path="lib/pi4j-core.jar" sourcepath="lib/pi4j-core-sources.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
