@@ -174,7 +174,7 @@ confirmCount(byte ind)
     if (inChar == '\n')
     {
       unsigned long ll = inString.toInt();
-      pulseCount[ind] -= ll;
+      pulseCount[ind] -= ll / ppwh[ind];
       return;
     }
   }
