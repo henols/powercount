@@ -267,12 +267,18 @@ public class SensorPublisher {
 		String counter = r[0];
 		String pulses = r[1];
 		String power = r[2];
-		// logger.debug("pulses:"+pulses+" power:"+power);
-		if (Long.parseLong(pulses) < 0 || Long.parseLong(power) < 0) {
+		// logger.debug("pulses:"+pulses+" power:"+power)
+		double kWh; 
+		try{
+		if (Double.parseDouble(pulses) < 0 || Double.parseDouble(power) < 0) {
 			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
 			return false;
 		}
-		double kWh = toKWh(pulses);
+		kWh = toKWh(pulses);
+		}catch (NumberFormatException e){
+			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power,e);
+			return false;
+		}
 		// int Wh = Integer.parseInt(pulses);
 
 		if (!Double.isNaN(oldKWh[meter])) {
@@ -374,17 +380,17 @@ public class SensorPublisher {
 	// }
 
 	private static double toKWh(String power) {
-		if (power.length() == 1) {
-			power = "0.00" + power;
-		} else if (power.length() == 2) {
-			power = "0.0" + power;
-		} else if (power.length() == 3) {
-			power = "0." + power;
-		} else {
-			int l = power.length();
-			power = power.substring(0, l - 3) + "." + power.substring(l - 3);
-		}
-		return Double.parseDouble(power);
+//		if (power.length() == 1) {
+//			power = "0.00" + power;
+//		} else if (power.length() == 2) {
+//			power = "0.0" + power;
+//		} else if (power.length() == 3) {
+//			power = "0." + power;
+//		} else {
+//			int l = power.length();
+//			power = power.substring(0, l - 3) + "." + power.substring(l - 3);
+//		}
+		return Double.parseDouble(power)/1000;
 	}
 
 	private void reconnect() {
