@@ -12,7 +12,7 @@
 //1000 pulses / kwh / = 1 pulse per wh - Number of pulses per wh - found or set on the meter.
 // Number of pulses per kWh 1000 / PPWH = number of pulses per kWH
 #define PPWH_1 1
-#define PPWH_2 0.5
+#define PPWH_2 1
 
 #define POWER_AVERAGE_SIZE 5 // Power avrige size array
 #define PULSE_LOOP_1 1 // Number of loops before calcualting power
@@ -231,8 +231,8 @@ getCountText(byte ind)
   Serial.print(",pulses:");
   Serial.print((pulseCount[ind] / ppwh[ind]), DEC);
   Serial.print(",power:");
-  int p = 0;
-  for (int i = 0; i++; i < POWER_AVERAGE_SIZE)
+  long p = 0;
+  for (int i = 0; i < POWER_AVERAGE_SIZE; i++)
   {
     p += power[ind][i];
   }
