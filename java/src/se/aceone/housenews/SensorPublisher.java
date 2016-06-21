@@ -215,6 +215,7 @@ public class SensorPublisher {
 
 		MqttMessage message = new MqttMessage();
 		message.setQos(1);
+		message.setRetained(true);
 
 		String[] strings = result.split(",");
 		for (String string : strings) {
