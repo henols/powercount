@@ -17,14 +17,15 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttDefaultFilePersistence;
 import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 import org.eclipse.paho.client.mqttv3.MqttTopic;
+import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
 
 public class SensorPublisher {
 
@@ -533,18 +534,21 @@ public class SensorPublisher {
 	class Callback implements MqttCallback {
 
 		@Override
-		public void messageArrived(MqttTopic topic, MqttMessage message) throws Exception {
-		}
-
-		@Override
-		public void deliveryComplete(MqttDeliveryToken token) {
-
-		}
-
-		@Override
 		public void connectionLost(Throwable cause) {
 			logger.error("Connection lost", cause);
 			reconnectMqtt();
+		}
+
+		@Override
+		public void deliveryComplete(IMqttDeliveryToken arg0) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void messageArrived(String arg0, MqttMessage arg1) throws Exception {
+			// TODO Auto-generated method stub
+			
 		}
 	}
 }

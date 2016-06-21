@@ -1,3 +1,3 @@
 #!/bin/sh
 cd /home/pi/housenews
-exec java -classpath ./HouseNews.jar:./resources:./lib/org.eclipse.paho.client.mqttv3.jar:./lib/commons-cli.jar:./lib/log4j-1.2.16.jar:/opt/pi4j/lib/pi4j-core.jar se.aceone.housenews.SensorPublisher -a aceone.se -l Lyran4 -c /dev/ttyAMA0 > /dev/null
+exec java -classpath ./HouseNews.jar:./resources:./lib/org.eclipse.paho.client.mqttv3-1.0.2.jar:./lib/commons-cli.jar:./lib/log4j-1.2.16.jar:/opt/pi4j/lib/pi4j-core.jar se.aceone.housenews.SensorPublisher -a aceone.se -l Lyran4 -c /dev/ttyAMA0 > /dev/null
