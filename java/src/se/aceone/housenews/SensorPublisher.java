@@ -1,11 +1,14 @@
 package se.aceone.housenews;
 
+import static java.util.concurrent.TimeUnit.*;
 
 import java.io.IOException;
 import java.net.SocketException;
 import java.util.Calendar;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -20,7 +23,6 @@ import org.apache.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
@@ -35,28 +37,26 @@ public class SensorPublisher {
 	private static final String ADDRESS = "address";
 	private final static String LOCATION = "location";
 
-	
-	private static final byte METER_1 =  0;
-	private static final byte METER_2 =  1;
-	
-	
+	private static final byte METER_1 = 0;
+	private static final byte METER_2 = 1;
+
 	private static final byte[] READ_METER_1 = { '4', '0' };
 	private static final byte[] READ_METER_2 = { '4', '1' };
-	private static final byte[][] READ_METER = { READ_METER_1, READ_METER_2};
+	private static final byte[][] READ_METER = { READ_METER_1, READ_METER_2 };
 
 	private static final byte[] CONFIRM_METER_1 = { 'c', '0' };
 	private static final byte[] CONFIRM_METER_2 = { 'c', '1' };
 	private static final byte[][] CONFIRM_METER = { CONFIRM_METER_1, CONFIRM_METER_2 };
 
-	
 	private static final byte[] TEMPERATURE = { 't', 't' };
 
 	private static final boolean DAYS = true;
 	private static final boolean CLEAR_COUNT = true;
 
-	private static final long POWER_PING_TIME = 10000;
-	private static final long TEMPERATURE_PING_TIME = 300000;
+	private static final long POWER_PING_TIME = 10;
+	private static final long TEMPERATURE_PING_TIME = 60;
 
+	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
 	final String POWER_TOPIC;
 	final String KWH_TOPIC;
@@ -64,10 +64,7 @@ public class SensorPublisher {
 
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
 	// private int oldWh = Integer.MIN_VALUE;
-	private double oldKWh[] = {Double.NaN,Double.NaN};
-
-	private long powerPingTime;
-	private long temperaturePingTime;
+	private double oldKWh[] = { Double.NaN, Double.NaN };
 
 	private Calendar nextDailyConsumtion;
 	private MqttClient client;
@@ -76,7 +73,9 @@ public class SensorPublisher {
 	private String port = "1883";
 	private String location;
 
-	public SensorPublisher(CommandLine cmd) throws Exception  {
+	private Object lock = new Object();
+
+	public SensorPublisher(CommandLine cmd) throws Exception {
 		address = cmd.getOptionValue(ADDRESS);
 		logger.info("Using address: " + address);
 		location = cmd.getOptionValue(LOCATION);
@@ -97,15 +96,15 @@ public class SensorPublisher {
 				connectionClass = "se.aceone.housenews.RXTXSerialConnection";
 			}
 		}
-		
+
 		logger.info("Using connection type: " + connectionClass);
-		
+
 		Class<?> clazz = getClass().getClassLoader().loadClass(connectionClass);
 		connection = (Connection) clazz.newInstance();
-		
+
 		connection.init(connectionName);
 		connection.open();
-				
+
 		if (cmd.hasOption(PORT)) {
 			port = cmd.getOptionValue(PORT);
 		}
@@ -116,9 +115,6 @@ public class SensorPublisher {
 
 	public void init() throws MqttException {
 		nextDailyConsumtion = getDailyConsumtionTime();
-		long currentTimeMillis = System.currentTimeMillis();
-		powerPingTime = currentTimeMillis + POWER_PING_TIME;
-		temperaturePingTime = currentTimeMillis;
 		String serverURI = "tcp://" + address + ":" + port;
 		logger.info("Connecting to MQTT server : " + serverURI);
 
@@ -149,17 +145,15 @@ public class SensorPublisher {
 		logger.info("Reconnected to MQTT server");
 	}
 
-	public void tick() {
-		Calendar now = Calendar.getInstance();
-		readPowerMeter(now);
-		readTemperature(now);
-	}
+	// public void tick() {
+	// Calendar now = Calendar.getInstance();
+	// readPowerMeter(now);
+	// readTemperature(now);
+	// }
 
-	private void readTemperature(Calendar now) {
-		if (now.getTimeInMillis() > temperaturePingTime) {
-			if (publishTemperature(now)) {
-				temperaturePingTime += TEMPERATURE_PING_TIME;
-			} else {
+	private void readTemperature() {
+		synchronized (lock) {
+			if (!publishTemperature()) {
 				connection.close();
 				try {
 					connection.open();
@@ -169,32 +163,31 @@ public class SensorPublisher {
 		}
 	}
 
-	private void readPowerMeter(Calendar now) {
-		if (now.getTimeInMillis() > powerPingTime) {
-			if (publishPower()) {
-				powerPingTime += POWER_PING_TIME;
-			} else {
+	private void readPowerMeter() {
+		synchronized (lock) {
+			if (!publishPower()) {
 				connection.close();
 				try {
 					connection.open();
 				} catch (Exception e) {
 				}
 			}
-		}
-		if (now.after(nextDailyConsumtion)) {
-			if (publishDailyConsumtion()) {
-				nextDailyConsumtion = getDailyConsumtionTime();
-			} else {
-				connection.close();
-				try {
-					connection.open();
-				} catch (Exception e) {
+			Calendar now = Calendar.getInstance();
+			if (now.after(nextDailyConsumtion)) {
+				if (publishDailyConsumtion()) {
+					nextDailyConsumtion = getDailyConsumtionTime();
+				} else {
+					connection.close();
+					try {
+						connection.open();
+					} catch (Exception e) {
+					}
 				}
 			}
 		}
 	}
 
-	private boolean publishTemperature(Calendar now) {
+	private boolean publishTemperature() {
 		String result;
 		try {
 			result = readProtocol(TEMPERATURE);
@@ -240,7 +233,7 @@ public class SensorPublisher {
 	private boolean publishPower() {
 		return publishPower(METER_1) && publishPower(METER_2);
 	}
-	
+
 	private boolean publishPower(byte meter) {
 		String result;
 		try {
@@ -261,8 +254,8 @@ public class SensorPublisher {
 		String[] r;
 		try {
 			r = splitPowerResult(result);
-		} catch (NoSuchElementException e){
-			logger.error("Got some crapp from reader: "+result , e);
+		} catch (NoSuchElementException e) {
+			logger.error("Got some crapp from reader: " + result, e);
 			return false;
 		}
 		@SuppressWarnings("unused")
@@ -270,15 +263,15 @@ public class SensorPublisher {
 		String pulses = r[1];
 		String power = r[2];
 		// logger.debug("pulses:"+pulses+" power:"+power)
-		double kWh; 
-		try{
-		if (Double.parseDouble(pulses) < 0 || Double.parseDouble(power) < 0) {
-			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
-			return false;
-		}
-		kWh = toKWh(pulses);
-		}catch (NumberFormatException e){
-			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power,e);
+		double kWh;
+		try {
+			if (Double.parseDouble(pulses) < 0 || Double.parseDouble(power) < 0) {
+				logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
+				return false;
+			}
+			kWh = toKWh(pulses);
+		} catch (NumberFormatException e) {
+			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power, e);
 			return false;
 		}
 		// int Wh = Integer.parseInt(pulses);
@@ -289,7 +282,7 @@ public class SensorPublisher {
 			MqttMessage message = new MqttMessage();
 			message.setQos(1);
 
-			MqttTopic topic = client.getTopic(KWH_TOPIC+meter);
+			MqttTopic topic = client.getTopic(KWH_TOPIC + meter);
 			message.setPayload(String.valueOf(nKWh).getBytes());
 			try {
 				topic.publish(message);
@@ -298,7 +291,7 @@ public class SensorPublisher {
 			} catch (MqttException e) {
 				logger.error("Failed to publish: " + message, e);
 			}
-			topic = client.getTopic(POWER_TOPIC+meter);
+			topic = client.getTopic(POWER_TOPIC + meter);
 			message.setPayload(power.getBytes());
 			try {
 				topic.publish(message);
@@ -317,6 +310,7 @@ public class SensorPublisher {
 	private boolean publishDailyConsumtion() {
 		return publishDailyConsumtion(METER_1) && publishDailyConsumtion(METER_2);
 	}
+
 	private boolean publishDailyConsumtion(byte meter) {
 		logger.debug("Read power counter.");
 		try {
@@ -336,7 +330,7 @@ public class SensorPublisher {
 			MqttMessage message = new MqttMessage();
 			message.setQos(1);
 
-			MqttTopic topic = client.getTopic(KWH_TOPIC + "/dailyconsumption"+meter);
+			MqttTopic topic = client.getTopic(KWH_TOPIC + "/dailyconsumption" + meter);
 			message.setPayload(String.valueOf(kWh).getBytes());
 			try {
 				topic.publish(message);
@@ -382,17 +376,18 @@ public class SensorPublisher {
 	// }
 
 	private static double toKWh(String power) {
-//		if (power.length() == 1) {
-//			power = "0.00" + power;
-//		} else if (power.length() == 2) {
-//			power = "0.0" + power;
-//		} else if (power.length() == 3) {
-//			power = "0." + power;
-//		} else {
-//			int l = power.length();
-//			power = power.substring(0, l - 3) + "." + power.substring(l - 3);
-//		}
-		return Double.parseDouble(power)/1000;
+		// if (power.length() == 1) {
+		// power = "0.00" + power;
+		// } else if (power.length() == 2) {
+		// power = "0.0" + power;
+		// } else if (power.length() == 3) {
+		// power = "0." + power;
+		// } else {
+		// int l = power.length();
+		// power = power.substring(0, l - 3) + "." + power.substring(l - 3);
+		// }
+//		return Double.parseDouble(power) / 1000;
+		return Double.parseDouble(power);
 	}
 
 	private void reconnect() {
@@ -466,13 +461,20 @@ public class SensorPublisher {
 	}
 
 	public void process() {
-		while (true) {
-			tick();
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-			}
-		}
+
+		logger.info("Setting power readings to every: " + POWER_PING_TIME + " sec");
+		scheduler.scheduleAtFixedRate(this::readPowerMeter, 0, POWER_PING_TIME, SECONDS);
+
+		logger.info("Setting temperature readings to every: " + TEMPERATURE_PING_TIME+ " sec");
+		scheduler.scheduleAtFixedRate(this::readTemperature, 0, TEMPERATURE_PING_TIME, SECONDS);
+
+		// while (true) {
+		// tick();
+		// try {
+		// Thread.sleep(1000);
+		// } catch (InterruptedException e) {
+		// }
+		// }
 	}
 
 	@SuppressWarnings("static-access")
@@ -484,8 +486,8 @@ public class SensorPublisher {
 				.isRequired().create('a');
 		options.addOption(address);
 
-		Option location = OptionBuilder.withLongOpt(LOCATION).hasArg(true).withDescription("Location name")
-				.isRequired().create('l');
+		Option location = OptionBuilder.withLongOpt(LOCATION).hasArg(true).withDescription("Location name").isRequired()
+				.create('l');
 		options.addOption(location);
 
 		OptionGroup optionGroup = new OptionGroup();
@@ -512,10 +514,10 @@ public class SensorPublisher {
 			printUsage(options);
 		}
 		SensorPublisher sensorPublisher = new SensorPublisher(cmd);
-		while(true){
-			try{
+		while (true) {
+			try {
 				sensorPublisher.init();
-			} catch(MqttException e){
+			} catch (MqttException e) {
 				logger.error("Failed to init.", e);
 				Thread.sleep(10000);
 				continue;
@@ -542,13 +544,13 @@ public class SensorPublisher {
 		@Override
 		public void deliveryComplete(IMqttDeliveryToken arg0) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		public void messageArrived(String arg0, MqttMessage arg1) throws Exception {
 			// TODO Auto-generated method stub
-			
+
 		}
 	}
 }

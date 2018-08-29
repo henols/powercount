@@ -18,12 +18,12 @@ public class Pi4JSerialConnection implements Connection {
 	}
 
 	@Override
-	public void init(String device)  {
+	public void init(String device) {
 		this.device = device;
 	}
-	
+
 	@Override
-	public void open()throws Exception{
+	public void open() throws Exception {
 		serial = SerialFactory.createInstance();
 		serial.open(device, BAUD_RATE);
 		os = new LocalOutputStream(serial);
@@ -69,12 +69,12 @@ public class Pi4JSerialConnection implements Connection {
 
 		LocalInputStream(Serial serial) {
 			this.serial = serial;
-
 		}
 
 		@Override
 		public int read() throws IOException {
-			return serial.read();
+			byte[] r = serial.read(1);
+			return r != null && r.length > 0 ? (int) r[0] : -1;
 		}
 
 		@Override
@@ -84,7 +84,7 @@ public class Pi4JSerialConnection implements Connection {
 
 		@Override
 		public int available() throws IOException {
-			return serial.availableBytes();
+			return serial.available();
 		}
 
 	}
@@ -92,7 +92,11 @@ public class Pi4JSerialConnection implements Connection {
 	@Override
 	public void close() {
 		if (serial != null) {
-			serial.close();
+			try {
+				serial.close();
+			} catch (IllegalStateException e) {
+			} catch (IOException e) {
+			}
 		}
 	}
 
