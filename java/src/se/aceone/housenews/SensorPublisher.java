@@ -64,7 +64,7 @@ public class SensorPublisher {
 
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
 	// private int oldWh = Integer.MIN_VALUE;
-	private double oldKWh[] = { Double.NaN, Double.NaN };
+	private int oldKWh[] = { Integer.MIN_VALUE, Integer.MIN_VALUE};
 
 	private Calendar nextDailyConsumtion;
 	private MqttClient client;
@@ -231,10 +231,11 @@ public class SensorPublisher {
 	}
 
 	private boolean publishPower() {
-		return publishPower(METER_1) && publishPower(METER_2);
+		long timestamp = System.currentTimeMillis();
+		return publishPower(METER_1, timestamp) && publishPower(METER_2, timestamp);
 	}
 
-	private boolean publishPower(byte meter) {
+	private boolean publishPower(byte meter, long timestamp) {
 		String result;
 		try {
 			result = readProtocol(READ_METER[meter]);
@@ -263,27 +264,26 @@ public class SensorPublisher {
 		String pulses = r[1];
 		String power = r[2];
 		// logger.debug("pulses:"+pulses+" power:"+power)
-		double kWh;
+		int kWh;
 		try {
-			if (Double.parseDouble(pulses) < 0 || Double.parseDouble(power) < 0) {
+			if (Integer.parseInt(pulses) < 0 || Integer.parseInt(power) < 0) {
 				logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
 				return false;
 			}
-			kWh = toKWh(pulses);
+			kWh = Integer.parseInt(pulses);
 		} catch (NumberFormatException e) {
 			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power, e);
 			return false;
 		}
-		// int Wh = Integer.parseInt(pulses);
 
-		if (!Double.isNaN(oldKWh[meter])) {
-			double nKWh = kWh - oldKWh[meter];
+		if (Integer.MIN_VALUE != oldKWh[meter]) {
+			int nKWh = kWh - oldKWh[meter];
 
 			MqttMessage message = new MqttMessage();
 			message.setQos(1);
 
 			MqttTopic topic = client.getTopic(KWH_TOPIC + meter);
-			message.setPayload(String.valueOf(nKWh).getBytes());
+			message.setPayload(buildJson(nKWh, timestamp).getBytes());
 			try {
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
@@ -292,7 +292,7 @@ public class SensorPublisher {
 				logger.error("Failed to publish: " + message, e);
 			}
 			topic = client.getTopic(POWER_TOPIC + meter);
-			message.setPayload(power.getBytes());
+			message.setPayload(buildJson(power, timestamp).getBytes());
 			try {
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
@@ -301,12 +301,21 @@ public class SensorPublisher {
 				logger.error("Failed to publish: " + message, e);
 			}
 		}
-		// oldWh = Wh;
 		oldKWh[meter] = kWh;
 		// logger.debug("ping : " + sb.toString().trim());
 		return true;
 	}
 
+	private String buildJson(double value, long timestamp) {
+		return buildJson(String.valueOf(value), timestamp);
+	}
+	
+	private String buildJson(String value, long timestamp) {
+		return "{\"value\": "+ value+", \"timestamp\":" + timestamp+ "}";
+	}
+	
+	
+	
 	private boolean publishDailyConsumtion() {
 		return publishDailyConsumtion(METER_1) && publishDailyConsumtion(METER_2);
 	}
