@@ -64,7 +64,7 @@ public class SensorPublisher {
 
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
 
-	private double oldKWh[] = { Double.MIN_VALUE, Double.MIN_VALUE};
+	private double oldKWh[] = { Double.MIN_VALUE, Double.MIN_VALUE };
 
 	private Calendar nextDailyConsumtion;
 	private MqttClient client;
@@ -279,6 +279,7 @@ public class SensorPublisher {
 			MqttTopic topic = client.getTopic(KWH_TOPIC + meter);
 			message.setPayload(buildJson(nKWh, timestamp).getBytes());
 			try {
+				logger.debug(message);
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
 				logger.error("Failed to persist: " + message, e);
@@ -288,6 +289,7 @@ public class SensorPublisher {
 			topic = client.getTopic(POWER_TOPIC + meter);
 			message.setPayload(buildJson(power, timestamp).getBytes());
 			try {
+				logger.debug(message);
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
 				logger.error("Failed to persist: " + message, e);
@@ -303,11 +305,13 @@ public class SensorPublisher {
 	private String buildJson(double value, long timestamp) {
 		return buildJson(String.valueOf(value), timestamp);
 	}
-	
+
 	private String buildJson(String value, long timestamp) {
-		return "{\"value\": "+ value+", \"timestamp\":" + timestamp+ "}";
+		String json = "{\"value\": " + value + ", \"timestamp\":" + timestamp + "}";
+		logger.debug(json);
+		return json;
 	}
-	
+
 	private boolean publishDailyConsumtion() {
 		return publishDailyConsumtion(METER_1) && publishDailyConsumtion(METER_2);
 	}
@@ -446,7 +450,7 @@ public class SensorPublisher {
 		logger.info("Setting power readings to every: " + POWER_PING_TIME + " sec");
 		scheduler.scheduleAtFixedRate(this::readPowerMeter, 0, POWER_PING_TIME, SECONDS);
 
-		logger.info("Setting temperature readings to every: " + TEMPERATURE_PING_TIME+ " sec");
+		logger.info("Setting temperature readings to every: " + TEMPERATURE_PING_TIME + " sec");
 		scheduler.scheduleAtFixedRate(this::readTemperature, 0, TEMPERATURE_PING_TIME, SECONDS);
 
 	}
