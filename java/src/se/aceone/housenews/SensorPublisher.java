@@ -289,7 +289,7 @@ public class SensorPublisher {
 			} catch (MqttException e) {
 				logger.error("Failed to publish: " + message, e);
 			}
-			message.setPayload(buildJson(nKWh, timestamp, "power" + meter,  meter == 0 ? "Main" : "Heantpump").getBytes());
+			message.setPayload(buildJson(power, timestamp, "power" + meter,  meter == 0 ? "Main" : "Heantpump").getBytes());
 			topic = client.getTopic(POWER_TOPIC + meter);
 			try {
 				logger.debug("Publishing to broker: " + topic + " : " + message);
