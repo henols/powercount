@@ -279,7 +279,7 @@ public class SensorPublisher {
 			MqttTopic topic = client.getTopic(KWH_TOPIC + meter);
 			message.setPayload(buildJson(nKWh, timestamp).getBytes());
 			try {
-				logger.debug(message);
+				logger.debug(topic + " " + message);
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
 				logger.error("Failed to persist: " + message, e);
@@ -289,7 +289,7 @@ public class SensorPublisher {
 			topic = client.getTopic(POWER_TOPIC + meter);
 			message.setPayload(buildJson(power, timestamp).getBytes());
 			try {
-				logger.debug(message);
+				logger.debug(topic + " " + message);
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
 				logger.error("Failed to persist: " + message, e);
@@ -307,9 +307,7 @@ public class SensorPublisher {
 	}
 
 	private String buildJson(String value, long timestamp) {
-		String json = "{\"value\": " + value + ", \"timestamp\":" + timestamp + "}";
-		logger.debug(json);
-		return json;
+		return "{\"value\":" + value + ",\"timestamp\":" + timestamp + "}";
 	}
 
 	private boolean publishDailyConsumtion() {
