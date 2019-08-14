@@ -205,6 +205,8 @@ public class SensorPublisher {
 		message.setQos(1);
 		message.setRetained(true);
 
+		long timestamp = System.currentTimeMillis();
+
 		String[] strings = result.split(",");
 		for (String string : strings) {
 			int indexOf = string.indexOf(':');
@@ -212,7 +214,7 @@ public class SensorPublisher {
 				continue;
 			}
 			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC + string.substring(0, indexOf));
-			message.setPayload(string.substring(indexOf + 1).getBytes());
+			message.setPayload(buildJson(string.substring(indexOf + 1), timestamp, string.substring(0, indexOf),  null).getBytes());
 			try {
 				logger.debug("Publishing to broker: " + topic + " : " + message);
 				topic.publish(message);
@@ -278,7 +280,7 @@ public class SensorPublisher {
 			message.setQos(1);
 
 			MqttTopic topic = client.getTopic(KWH_TOPIC + meter);
-			message.setPayload(buildJson(nKWh, timestamp).getBytes());
+			message.setPayload(buildJson(nKWh, timestamp, "kwh" + meter, meter == 0 ? "Main" : "Heantpump").getBytes());
 			try {
 				logger.debug("Publishing to broker: " + topic + " : " + message);
 				topic.publish(message);
@@ -287,8 +289,8 @@ public class SensorPublisher {
 			} catch (MqttException e) {
 				logger.error("Failed to publish: " + message, e);
 			}
+			message.setPayload(buildJson(nKWh, timestamp, "power" + meter,  meter == 0 ? "Main" : "Heantpump").getBytes());
 			topic = client.getTopic(POWER_TOPIC + meter);
-			message.setPayload(buildJson(power, timestamp).getBytes());
 			try {
 				logger.debug("Publishing to broker: " + topic + " : " + message);
 				topic.publish(message);
@@ -303,12 +305,28 @@ public class SensorPublisher {
 		return true;
 	}
 
-	private String buildJson(double value, long timestamp) {
-		return buildJson(String.valueOf(value), timestamp);
+	private String buildJson(double value, long timestamp, String name, String alias) {
+		return buildJson(String.valueOf(value), timestamp, name, alias);
 	}
 
-	private String buildJson(String value, long timestamp) {
-		return "{\"value\":" + value + ",\"timestamp\":" + timestamp + "}";
+	private String buildJson(String value, long timestamp, String name, String alias) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("{\"value\":");
+		sb.append(value);
+		sb.append(",\"timestamp\":");
+		sb.append(timestamp);
+		if (name != null) {
+			sb.append(",\"name\":\"");
+			sb.append(name);
+			sb.append("\"");
+		}
+		if (alias != null) {
+			sb.append(",\"alias\":\"");
+			sb.append(alias);
+			sb.append("\"");
+		}
+		sb.append("}");
+		return sb.toString();
 	}
 
 	private boolean publishDailyConsumtion() {
