@@ -214,6 +214,7 @@ public class SensorPublisher {
 			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC + string.substring(0, indexOf));
 			message.setPayload(string.substring(indexOf + 1).getBytes());
 			try {
+				logger.debug(topic + " : " + message);
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
 				logger.error("Failed to persist: " + message, e);
@@ -279,7 +280,7 @@ public class SensorPublisher {
 			MqttTopic topic = client.getTopic(KWH_TOPIC + meter);
 			message.setPayload(buildJson(nKWh, timestamp).getBytes());
 			try {
-				logger.debug(topic + " " + message);
+				logger.debug(topic + " : " + message);
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
 				logger.error("Failed to persist: " + message, e);
@@ -289,7 +290,7 @@ public class SensorPublisher {
 			topic = client.getTopic(POWER_TOPIC + meter);
 			message.setPayload(buildJson(power, timestamp).getBytes());
 			try {
-				logger.debug(topic + " " + message);
+				logger.debug(topic + " : " + message);
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
 				logger.error("Failed to persist: " + message, e);
