@@ -270,7 +270,7 @@ public class SensorPublisher {
 			return false;
 		}
 
-		if (Long.MIN_VALUE != oldKWh[meter]) {
+		if (Double.MIN_VALUE != oldKWh[meter]) {
 			double nKWh = kWh - oldKWh[meter];
 
 			MqttMessage message = new MqttMessage();
