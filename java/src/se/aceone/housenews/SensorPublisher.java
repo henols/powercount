@@ -1,6 +1,6 @@
 package se.aceone.housenews;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -63,8 +63,8 @@ public class SensorPublisher {
 	final String TEMPERATURE_TOPIC;
 
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
-	// private int oldWh = Integer.MIN_VALUE;
-	private int oldKWh[] = { Integer.MIN_VALUE, Integer.MIN_VALUE};
+
+	private long oldKWh[] = { Long.MIN_VALUE, Long.MIN_VALUE};
 
 	private Calendar nextDailyConsumtion;
 	private MqttClient client;
@@ -144,12 +144,6 @@ public class SensorPublisher {
 		}
 		logger.info("Reconnected to MQTT server");
 	}
-
-	// public void tick() {
-	// Calendar now = Calendar.getInstance();
-	// readPowerMeter(now);
-	// readTemperature(now);
-	// }
 
 	private void readTemperature() {
 		synchronized (lock) {
@@ -264,20 +258,20 @@ public class SensorPublisher {
 		String pulses = r[1];
 		String power = r[2];
 		// logger.debug("pulses:"+pulses+" power:"+power)
-		int kWh;
+		long kWh;
 		try {
-			if (Integer.parseInt(pulses) < 0 || Integer.parseInt(power) < 0) {
+			if (Long.parseLong(pulses) < 0 || Long.parseLong(power) < 0) {
 				logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
 				return false;
 			}
-			kWh = Integer.parseInt(pulses);
+			kWh = Long.parseLong(pulses);
 		} catch (NumberFormatException e) {
 			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power, e);
 			return false;
 		}
 
-		if (Integer.MIN_VALUE != oldKWh[meter]) {
-			int nKWh = kWh - oldKWh[meter];
+		if (Long.MIN_VALUE != oldKWh[meter]) {
+			long nKWh = kWh - oldKWh[meter];
 
 			MqttMessage message = new MqttMessage();
 			message.setQos(1);
@@ -313,8 +307,6 @@ public class SensorPublisher {
 	private String buildJson(String value, long timestamp) {
 		return "{\"value\": "+ value+", \"timestamp\":" + timestamp+ "}";
 	}
-	
-	
 	
 	private boolean publishDailyConsumtion() {
 		return publishDailyConsumtion(METER_1) && publishDailyConsumtion(METER_2);
@@ -375,27 +367,7 @@ public class SensorPublisher {
 		return r;
 	}
 
-	// private double toKWh(String power) throws NumberFormatException {
-	// BigDecimal b = new BigDecimal(power);
-	// BigDecimal divide = b.divide(new BigDecimal(1000), 3,
-	// BigDecimal.ROUND_HALF_UP);
-	// double kWh = divide.doubleValue();
-	// return kWh;
-	// return ((double)Integer.parseInt(power))/1000;
-	// }
-
 	private static double toKWh(String power) {
-		// if (power.length() == 1) {
-		// power = "0.00" + power;
-		// } else if (power.length() == 2) {
-		// power = "0.0" + power;
-		// } else if (power.length() == 3) {
-		// power = "0." + power;
-		// } else {
-		// int l = power.length();
-		// power = power.substring(0, l - 3) + "." + power.substring(l - 3);
-		// }
-//		return Double.parseDouble(power) / 1000;
 		return Double.parseDouble(power);
 	}
 
@@ -477,13 +449,6 @@ public class SensorPublisher {
 		logger.info("Setting temperature readings to every: " + TEMPERATURE_PING_TIME+ " sec");
 		scheduler.scheduleAtFixedRate(this::readTemperature, 0, TEMPERATURE_PING_TIME, SECONDS);
 
-		// while (true) {
-		// tick();
-		// try {
-		// Thread.sleep(1000);
-		// } catch (InterruptedException e) {
-		// }
-		// }
 	}
 
 	@SuppressWarnings("static-access")
@@ -552,14 +517,11 @@ public class SensorPublisher {
 
 		@Override
 		public void deliveryComplete(IMqttDeliveryToken arg0) {
-			// TODO Auto-generated method stub
 
 		}
 
 		@Override
 		public void messageArrived(String arg0, MqttMessage arg1) throws Exception {
-			// TODO Auto-generated method stub
-
 		}
 	}
 }
