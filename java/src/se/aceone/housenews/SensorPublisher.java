@@ -64,7 +64,7 @@ public class SensorPublisher {
 
 	private static Logger logger = Logger.getLogger(SensorPublisher.class);
 
-	private long oldKWh[] = { Long.MIN_VALUE, Long.MIN_VALUE};
+	private double oldKWh[] = { Double.MIN_VALUE, Double.MIN_VALUE};
 
 	private Calendar nextDailyConsumtion;
 	private MqttClient client;
@@ -258,20 +258,20 @@ public class SensorPublisher {
 		String pulses = r[1];
 		String power = r[2];
 		// logger.debug("pulses:"+pulses+" power:"+power)
-		long kWh;
+		double kWh;
 		try {
-			if (Long.parseLong(pulses) < 0 || Long.parseLong(power) < 0) {
+			if (Double.parseDouble(pulses) < 0 || Double.parseDouble(power) < 0) {
 				logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power);
 				return false;
 			}
-			kWh = Long.parseLong(pulses);
+			kWh = Double.parseDouble(pulses);
 		} catch (NumberFormatException e) {
 			logger.error("We seem to have a negative value: pulses:" + pulses + " power:" + power, e);
 			return false;
 		}
 
 		if (Long.MIN_VALUE != oldKWh[meter]) {
-			long nKWh = kWh - oldKWh[meter];
+			double nKWh = kWh - oldKWh[meter];
 
 			MqttMessage message = new MqttMessage();
 			message.setQos(1);
