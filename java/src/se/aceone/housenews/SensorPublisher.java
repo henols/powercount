@@ -37,6 +37,12 @@ public class SensorPublisher {
 	private static final String ADDRESS = "address";
 	private final static String LOCATION = "location";
 
+	private static final String MAIN = "Main";
+	private static final String HEATPUMP = "Heatpump";
+
+	private static final String KWH = "kwh";
+	private static final String POWER = "power";
+
 	private static final byte METER_1 = 0;
 	private static final byte METER_2 = 1;
 
@@ -108,8 +114,8 @@ public class SensorPublisher {
 		if (cmd.hasOption(PORT)) {
 			port = cmd.getOptionValue(PORT);
 		}
-		POWER_TOPIC = location + "/powermeter/power";
-		KWH_TOPIC = location + "/powermeter/kwh";
+		POWER_TOPIC = location + "/powermeter/" + POWER;
+		KWH_TOPIC = location + "/powermeter/" + KWH;
 		TEMPERATURE_TOPIC = location + "/temperature/";
 	}
 
@@ -121,7 +127,7 @@ public class SensorPublisher {
 		String tmpDir = System.getProperty("java.io.tmpdir");
 		MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir + "/mqtt");
 
-		client = new MqttClient(serverURI, "SensPub" + location, dataStore);
+		client = new MqttClient(serverURI, "SensorPublisher_" + location, dataStore);
 		client.setCallback(new Callback());
 		client.connect();
 		logger.info("Connected to MQTT server : " + serverURI);
@@ -214,7 +220,8 @@ public class SensorPublisher {
 				continue;
 			}
 			MqttTopic topic = client.getTopic(TEMPERATURE_TOPIC + string.substring(0, indexOf));
-			message.setPayload(buildJson(string.substring(indexOf + 1), timestamp, string.substring(0, indexOf),  null).getBytes());
+			message.setPayload(
+					buildJson(string.substring(indexOf + 1), timestamp, string.substring(0, indexOf), null).getBytes());
 			try {
 				logger.debug("Publishing to broker: " + topic + " : " + message);
 				topic.publish(message);
@@ -280,7 +287,7 @@ public class SensorPublisher {
 			message.setQos(1);
 
 			MqttTopic topic = client.getTopic(KWH_TOPIC + meter);
-			message.setPayload(buildJson(nKWh, timestamp, "kwh" + meter, meter == 0 ? "Main" : "Heantpump").getBytes());
+			message.setPayload(buildJson(nKWh, timestamp, KWH + meter, meter == 0 ? MAIN : HEATPUMP).getBytes());
 			try {
 				logger.debug("Publishing to broker: " + topic + " : " + message);
 				topic.publish(message);
@@ -289,7 +296,7 @@ public class SensorPublisher {
 			} catch (MqttException e) {
 				logger.error("Failed to publish: " + message, e);
 			}
-			message.setPayload(buildJson(power, timestamp, "power" + meter,  meter == 0 ? "Main" : "Heantpump").getBytes());
+			message.setPayload(buildJson(power, timestamp, POWER + meter, meter == 0 ? MAIN : HEATPUMP).getBytes());
 			topic = client.getTopic(POWER_TOPIC + meter);
 			try {
 				logger.debug("Publishing to broker: " + topic + " : " + message);
