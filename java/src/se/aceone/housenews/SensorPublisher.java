@@ -1,5 +1,6 @@
 package se.aceone.housenews;
 
+import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.io.IOException;
@@ -56,7 +57,7 @@ public class SensorPublisher {
 
 	private static final byte[] TEMPERATURE = { 't', 't' };
 
-	private static final boolean DAYS = true;
+	private static final boolean DAYS_ = true;
 	private static final boolean CLEAR_COUNT = true;
 
 	private static final long POWER_PING_TIME = 10;
@@ -172,16 +173,16 @@ public class SensorPublisher {
 				} catch (Exception e) {
 				}
 			}
-			Calendar now = Calendar.getInstance();
-			if (now.after(nextDailyConsumtion)) {
-				if (publishDailyConsumtion()) {
-					nextDailyConsumtion = getDailyConsumtionTime();
-				} else {
-					connection.close();
-					try {
-						connection.open();
-					} catch (Exception e) {
-					}
+		}
+	}
+
+	private void readDailyConsumtion() {
+		synchronized (lock) {
+			if (!publishDailyConsumtion()) {
+				connection.close();
+				try {
+					connection.open();
+				} catch (Exception e) {
 				}
 			}
 		}
@@ -337,10 +338,11 @@ public class SensorPublisher {
 	}
 
 	private boolean publishDailyConsumtion() {
-		return publishDailyConsumtion(METER_1) && publishDailyConsumtion(METER_2);
+		long timestamp = System.currentTimeMillis();
+		return publishDailyConsumtion(METER_1, timestamp) && publishDailyConsumtion(METER_2, timestamp);
 	}
 
-	private boolean publishDailyConsumtion(byte meter) {
+	private boolean publishDailyConsumtion(byte meter, long timestamp) {
 		logger.debug("Read power counter.");
 		try {
 			String result = readProtocol(READ_METER[meter]);
@@ -360,7 +362,9 @@ public class SensorPublisher {
 			message.setQos(1);
 
 			MqttTopic topic = client.getTopic(KWH_TOPIC + "/dailyconsumption" + meter);
-			message.setPayload(String.valueOf(kWh).getBytes());
+
+			message.setPayload(buildJson(kWh, timestamp, KWH + meter, meter == 0 ? MAIN : HEATPUMP).getBytes());
+
 			try {
 				topic.publish(message);
 			} catch (MqttPersistenceException e) {
@@ -452,20 +456,21 @@ public class SensorPublisher {
 		Calendar nextTime = Calendar.getInstance();
 
 		// Zero out the hour, minute, second, and millisecond
-		if (DAYS) {
+		if (DAYS_) {
 			nextTime.set(Calendar.HOUR_OF_DAY, houres);
 			nextTime.set(Calendar.MINUTE, 0);
 		}
 		nextTime.set(Calendar.SECOND, 0);
 		nextTime.set(Calendar.MILLISECOND, 0);
 
-		if (DAYS) {
+		if (DAYS_) {
 			if (Calendar.getInstance().after(nextTime)) {
 				nextTime.add(Calendar.DAY_OF_YEAR, 1);
 			}
 		} else {
 			nextTime.add(Calendar.MINUTE, 1);
 		}
+
 		return nextTime;
 	}
 
@@ -473,6 +478,17 @@ public class SensorPublisher {
 
 		logger.info("Setting power readings to every: " + POWER_PING_TIME + " sec");
 		scheduler.scheduleAtFixedRate(this::readPowerMeter, 0, POWER_PING_TIME, SECONDS);
+
+		Calendar c = Calendar.getInstance();
+		c.add(Calendar.DAY_OF_MONTH, 1);
+		c.set(Calendar.HOUR_OF_DAY, 0);
+		c.set(Calendar.MINUTE, 0);
+		c.set(Calendar.SECOND, 0);
+		c.set(Calendar.MILLISECOND, 0);
+		long untilMidnight = (c.getTimeInMillis() - System.currentTimeMillis());
+
+		logger.info("Setting dayly power readings to every: every day at midnight.");
+		scheduler.scheduleAtFixedRate(this::readDailyConsumtion, untilMidnight, 1, DAYS);
 
 		logger.info("Setting temperature readings to every: " + TEMPERATURE_PING_TIME + " sec");
 		scheduler.scheduleAtFixedRate(this::readTemperature, 0, TEMPERATURE_PING_TIME, SECONDS);
